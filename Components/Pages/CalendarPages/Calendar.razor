@@ -1,0 +1,151 @@
+﻿@page "/calendar"
+@using CalendarWebApp.Repository.IRepository
+@using MyAppointment = RadzenBlazorDemos.Appointment
+@inject DialogService DialogService
+@inject IAppointmentRepository _appointmentRepository
+
+@if (IsProcessing)
+{
+    <div class="position-absolute w-75 h-75 d-flex flex-column align-items-center bg-white justify-content-center">
+        <img src="/img/loading.gif" alt="loading" />
+    </div>
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-4 rz-mb-6 rz-border-radius-1" Style="border: var(--rz-grid-cell-border);height:4rem;">
+        <RadzenLabel Text="Show Header:  " />
+        <RadzenSwitch @bind-Value=@showHeader />
+    </RadzenStack>
+
+    <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender style="height: 768px;" TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=@showHeader
+                     TextProperty="Text" SelectedIndex="2"
+                     SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender DaySelect="@OnDaySelect"
+                     AppointmentMove=@OnAppointmentMove>
+        <RadzenDayView />
+        <RadzenWeekView />
+        <RadzenMonthView />
+    </RadzenScheduler>
+
+    @* <EventConsole @ref=@console /> *@   
+}
+
+@code {
+    RadzenScheduler<MyAppointment> scheduler;
+    // EventConsole console;
+    Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+    private bool IsProcessing { get; set; } = true;
+
+    bool showHeader = true;
+
+    IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadAppointments();
+            IsProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAppointments()
+    {
+        appointments = await _appointmentRepository.GetAllAsync();
+    }
+
+    void OnDaySelect(SchedulerDaySelectEventArgs args)
+    {
+        // console.Log($"DaySelect: Day={args.Day} AppointmentCount={args.Appointments.Count()}");
+    }
+
+    void OnSlotRender(SchedulerSlotRenderEventArgs args)
+    {
+        // Highlight today in month view
+        if (args.View.Text == "Month" && args.Start.Date == DateTime.Today)
+        {
+            args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
+        }
+
+        // Highlight working hours (9-18)
+        if ((args.View.Text == "Week" || args.View.Text == "Day") && args.Start.Hour > 8 && args.Start.Hour < 19)
+        {
+            args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
+        }
+    }
+
+    async Task OnSlotSelect(SchedulerSlotSelectEventArgs args)
+    {
+        // console.Log($"SlotSelect: Start={args.Start} End={args.End}");
+
+        if (args.View.Text != "Year")
+        {
+            MyAppointment data = await DialogService.OpenAsync<AddAppointmentPage>("Add Appointment",
+                new Dictionary<string, object> { { "Start", args.Start }, { "End", args.End } });
+
+            if (data != null)
+            {
+                await _appointmentRepository.CreateAsync(data);
+                await LoadAppointments();
+                // Either call the Reload method or reassign the Data property of the Scheduler
+                await scheduler.Reload();
+            }
+        }
+    }
+
+    async Task OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<MyAppointment> args)
+    {
+        // console.Log($"AppointmentSelect: Appointment={args.Data.Text}");
+
+        var copy = new MyAppointment
+        {
+            Id = args.Data.Id,
+            Start = args.Data.Start,
+            End = args.Data.End,
+            Text = args.Data.Text
+        };
+
+        var data = await DialogService.OpenAsync<EditAppointmentPage>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } });
+
+        if (data != null)
+        {
+            await _appointmentRepository.UpdateAsync(data);
+
+            await LoadAppointments();
+            await scheduler.Reload();
+        }
+    }
+
+    void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<MyAppointment> args)
+    {
+        // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
+
+        if (args.Data.Text == "Birthday")
+        {
+            args.Attributes["style"] = "background: red";
+        }
+    }
+
+    async Task OnAppointmentMove(SchedulerAppointmentMoveEventArgs args)
+    {
+        var draggedAppointment = appointments.FirstOrDefault(x => x == args.Appointment.Data);
+
+        if (draggedAppointment != null)
+        {
+            var duration = draggedAppointment.End - draggedAppointment.Start;
+
+            if (args.SlotDate.TimeOfDay == TimeSpan.Zero)
+            {
+                draggedAppointment.Start = args.SlotDate.Date.Add(draggedAppointment.Start.TimeOfDay);
+            }
+            else
+            {
+                draggedAppointment.Start = args.SlotDate;
+            }
+
+            draggedAppointment.End = draggedAppointment.Start.Add(duration);
+
+            await scheduler.Reload();
+        }
+    }
+}
