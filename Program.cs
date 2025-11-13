@@ -1,6 +1,8 @@
 using CalendarWebApp.Components;
 using CalendarWebApp.Components.Account;
 using CalendarWebApp.Data;
+using CalendarWebApp.Repository;
+using CalendarWebApp.Repository.IRepository;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +18,7 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 builder.Services.AddRadzenComponents();
 
 builder.Services.AddAuthentication(options =>
