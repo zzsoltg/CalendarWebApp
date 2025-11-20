@@ -20,6 +20,7 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 builder.Services.AddRadzenComponents();
+builder.Services.AddScoped<Radzen.TooltipService>();
 
 builder.Services.AddAuthentication(options =>
     {

@@ -55,6 +55,7 @@ namespace CalendarWebApp.Repository
                 objFromDb.Start = obj.Start;
                 objFromDb.End = obj.End;
                 objFromDb.Text = obj.Text;
+                objFromDb.Type = obj.Type;
                 _db.Appointment.Update(objFromDb);
                 await _db.SaveChangesAsync();
                 return objFromDb;

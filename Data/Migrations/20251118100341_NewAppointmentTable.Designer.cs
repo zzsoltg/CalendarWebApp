@@ -4,6 +4,7 @@ using CalendarWebApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CalendarWebApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251118100341_NewAppointmentTable")]
+    partial class NewAppointmentTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -239,6 +242,7 @@ namespace CalendarWebApp.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Type")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -249,24 +253,24 @@ namespace CalendarWebApp.Migrations
                         new
                         {
                             Id = 1,
-                            End = new DateTime(2025, 11, 18, 0, 0, 0, 0, DateTimeKind.Local),
-                            Start = new DateTime(2025, 11, 18, 0, 0, 0, 0, DateTimeKind.Local),
+                            End = new DateTime(2025, 11, 16, 0, 0, 0, 0, DateTimeKind.Local),
+                            Start = new DateTime(2025, 11, 16, 0, 0, 0, 0, DateTimeKind.Local),
                             Text = "Szabi",
                             Type = "Szabadság"
                         },
                         new
                         {
                             Id = 2,
-                            End = new DateTime(2025, 11, 10, 0, 0, 0, 0, DateTimeKind.Local),
-                            Start = new DateTime(2025, 11, 9, 0, 0, 0, 0, DateTimeKind.Local),
+                            End = new DateTime(2025, 11, 8, 0, 0, 0, 0, DateTimeKind.Local),
+                            Start = new DateTime(2025, 11, 7, 0, 0, 0, 0, DateTimeKind.Local),
                             Text = "HO",
                             Type = "HomeOffice"
                         },
                         new
                         {
                             Id = 3,
-                            End = new DateTime(2025, 11, 12, 0, 0, 0, 0, DateTimeKind.Local),
-                            Start = new DateTime(2025, 11, 10, 0, 0, 0, 0, DateTimeKind.Local),
+                            End = new DateTime(2025, 11, 10, 0, 0, 0, 0, DateTimeKind.Local),
+                            Start = new DateTime(2025, 11, 8, 0, 0, 0, 0, DateTimeKind.Local),
                             Text = "AI tanfolyam",
                             Type = "Képzés"
                         });

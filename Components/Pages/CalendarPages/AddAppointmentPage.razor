@@ -17,6 +17,16 @@
             <RadzenDatePicker Name="End" @bind-Value="@model.End" ShowTime="true" Style="width: 12rem;" />
             <RadzenRequiredValidator Component="End" Text="End is required" />
         </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Type" Style="width: 4rem;" />
+            <RadzenDropDown @bind-Value="model.Type"
+                            Data="@typeOptions"
+                            Style="width: 12rem;"
+                            Placeholder="(nincs)"
+                            AllowClear="true" />
+        </RadzenStack>
+
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
             <RadzenButton ButtonType="ButtonType.Submit" Text="Save" />
         </RadzenStack>
@@ -30,6 +40,8 @@
     public DateTime End { get; set; }
 
     Appointment model = new Appointment();
+
+    private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés" };
 
     protected override void OnParametersSet()
     {

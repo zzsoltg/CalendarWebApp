@@ -3,6 +3,7 @@
 @using MyAppointment = RadzenBlazorDemos.Appointment
 @inject DialogService DialogService
 @inject IAppointmentRepository _appointmentRepository
+@inject Radzen.TooltipService TooltipService
 
 @if (IsProcessing)
 {
@@ -18,7 +19,7 @@ else
     </RadzenStack>
 
     <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender style="height: 768px;" TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=@showHeader
-                     TextProperty="Text" SelectedIndex="2"
+                     TextProperty="Text" SelectedIndex="2" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
                      SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender DaySelect="@OnDaySelect"
                      AppointmentMove=@OnAppointmentMove>
         <RadzenDayView />
@@ -102,15 +103,21 @@ else
             Id = args.Data.Id,
             Start = args.Data.Start,
             End = args.Data.End,
-            Text = args.Data.Text
+            Text = args.Data.Text,
+            Type = args.Data.Type
         };
 
         var data = await DialogService.OpenAsync<EditAppointmentPage>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } });
 
-        if (data != null)
+        if (data is MyAppointment model)
         {
             await _appointmentRepository.UpdateAsync(data);
 
+            await LoadAppointments();
+            await scheduler.Reload();
+        }
+        else if (data is bool deleted && deleted)
+        {
             await LoadAppointments();
             await scheduler.Reload();
         }
@@ -120,10 +127,19 @@ else
     {
         // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
 
-        if (args.Data.Text == "Birthday")
+        switch (args.Data.Type)
         {
-            args.Attributes["style"] = "background: red";
+            case "Szabadság":
+                args.Attributes["style"] = "background: green";
+                break;
+            case "HomeOffice":
+                args.Attributes["style"] = "background: blue";
+                break;
+            case "Képzés":
+                args.Attributes["style"] = "background: red";
+                break;
         }
+
     }
 
     async Task OnAppointmentMove(SchedulerAppointmentMoveEventArgs args)
@@ -147,5 +163,52 @@ else
 
             await scheduler.Reload();
         }
+    }
+
+    void OnAppointmentMouseEnter(SchedulerAppointmentMouseEventArgs<Appointment> args)
+    {
+        static bool IsSingleDay(Appointment a)
+        {
+            var startDate = a.Start.Date;
+            var effectiveEndDate = a.End.TimeOfDay == TimeSpan.Zero ? a.End.Date.AddDays(-1) : a.End.Date;
+            return startDate == effectiveEndDate;
+        }
+
+        bool onlySunday = IsSingleDay(args.Data) && args.Data.Start.DayOfWeek == DayOfWeek.Sunday;
+        var position = onlySunday ? TooltipPosition.Left : TooltipPosition.Top;
+
+        TooltipService.Open(args.Element, ts =>
+        @<RadzenStack Orientation="Orientation.Vertical" Gap="0" class="rz-p-6" Style="min-width: 250px; max-width: 500px;">
+            <RadzenText TextStyle="TextStyle.H4" class="rz-mb-4" Style="color: var(--rz-tooltip-color);">
+                @args.Data.Text
+            </RadzenText>
+            @if (args.Data.Type != null)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-mb-4" Style="color: var(--rz-tooltip-color);">
+                    Type: @args.Data.Type
+                </RadzenText>
+            }
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
+                    <strong>Start</strong>
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
+                    @args.Data.Start.ToString("hh:mm ⋅ dddd, MMMM d")
+                </RadzenText>
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
+                    <strong>End</strong>
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
+                    @args.Data.End.ToString("hh:mm ⋅ dddd, MMMM d")
+                </RadzenText>
+            </RadzenStack>
+        </RadzenStack>, new TooltipOptions { Position = position, Duration = null });
+    }
+
+    void OnAppointmentMouseLeave(SchedulerAppointmentMouseEventArgs<Appointment> args)
+    {
+        TooltipService.Close();
     }
 }

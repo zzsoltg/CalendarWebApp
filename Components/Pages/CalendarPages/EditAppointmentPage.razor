@@ -1,4 +1,6 @@
-﻿@inject DialogService DialogService
+﻿@using CalendarWebApp.Repository.IRepository
+@inject DialogService DialogService
+@inject IAppointmentRepository _appointmentRepository
 
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
     <RadzenStack Gap="1rem">
@@ -17,7 +19,18 @@
             <RadzenDatePicker Name="End" @bind-Value="@model.End" ShowTime="true" Style="width: 12rem;" />
             <RadzenRequiredValidator Component="End" Text="End is required" />
         </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Type" Style="width: 6rem;" />
+            <RadzenDropDown @bind-Value="model.Type"
+                            Data="@typeOptions"
+                            Style="width: 12rem;"
+                            Placeholder="(nincs)"
+                            AllowClear="true" />
+        </RadzenStack>
+
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Text="Delete" Click=@OnDelete Variant="Variant.Flat"/>
             <RadzenButton ButtonType="ButtonType.Submit" Text="Save" />
         </RadzenStack>
     </RadzenStack>
@@ -28,6 +41,8 @@
 
     Appointment model = new Appointment();
 
+    private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés" };
+
     protected override void OnParametersSet()
     {
         model = Appointment;
@@ -36,5 +51,17 @@
     void OnSubmit(Appointment model)
     {
         DialogService.Close(model);
+    }
+
+    protected async Task OnDelete()
+    {
+        var confirm = await DialogService.Confirm("Biztosan törölni szeretné ezt az időpontot?", "Törlés megerősítése",
+            new ConfirmOptions() { OkButtonText = "Igen", CancelButtonText = "Nem" });
+
+        if (confirm == true)
+        {
+            await _appointmentRepository.DeleteAsync(model.Id);
+            DialogService.Close(true);
+        }
     }
 }
