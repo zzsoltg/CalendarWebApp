@@ -7,38 +7,42 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 
-<nav class="navbar navbar-expand-md navbar-dark bg-dark pb-4 pt-4">
-	<div class="container-fluid">
-		<a class="navbar-brand" href="calendar">
-            <img src="/img/Logo.png" alt="Bootstrap" width="30" height="24">
+<nav class="navbar navbar-expand-md rz-navbar-custom"
+     style="margin:1rem; border-radius:0.5rem; box-shadow:0 4px 12px rgba(13,71,161,.06); padding:0.5rem 1rem;
+            background:#e3f2fd; color:#0d47a1; border:1px solid rgba(13,71,161,.12);
+            font-family:var(--rz-font-family, 'Roboto', 'Helvetica', Arial, sans-serif);">
+	<div class="container-fluid px-0">
+		<a class="navbar-brand d-flex align-items-center" href="calendar" style="color:inherit;">
+            <img src="/img/Logo.png" alt="Logo" width="30" height="24" class="me-2" />
 			Griff Calendar
 		</a>
 		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
-				aria-controls="navbarCollapse" aria-label="Toggle navigation">
+				aria-controls="navbarCollapse" aria-label="Toggle navigation" style="border-color: rgba(13,71,161,.2);">
 			<span class="navbar-toggler-icon"></span>
 		</button>
 		<div class="collapse navbar-collapse" id="navbarCollapse">
 			<ul class="navbar-nav me-auto mb-2 mb-md-0">
 				<li class="nav-item mx-2">
-					<NavLink class="nav-link" href="/calendar">
+					<NavLink class="nav-link" href="/calendar" style="color:inherit;">
 						<span class="bi bi-calendar-date" aria-hidden="true"></span> Calendar
 					</NavLink>
 				</li>
 			</ul>
-			<ul class="d-flex navbar-nav mb-2 mb-md-0">
+			<ul class="d-flex navbar-nav mb-2 mb-md-0 align-items-center">
 				<AuthorizeView>
 					<Authorized>
 						<li class="nav-item">
-							<NavLink class="nav-link p-2" href="Account/Manage">
+							<NavLink class="nav-link p-2" href="Account/Manage" style="color:inherit;">
 								Welcome, @context?.User?.Identity?.Name
 							</NavLink>
 						</li>
 						<li class="nav-item">
-							<form action="Account/Logout" method="post">
+							<form action="Account/Logout" method="post" class="m-0">
 								<AntiforgeryToken />
                                 <input type="hidden" name="ReturnUrl" value="Account/Login" />
-								<button type="submit" class="nav-link btn btn-success">
-									<span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+								<button type="submit" class="btn btn-sm"
+                                        style="background:#0d47a1; color:#fff; border:none;">
+									<span class="bi bi-box-arrow-right" aria-hidden="true"></span> Logout
 								</button>
 							</form>
 						</li>
