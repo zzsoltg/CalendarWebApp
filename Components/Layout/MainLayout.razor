@@ -2,11 +2,11 @@
 @using Radzen
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
 
     <main>
+        <AuthorizeView>
+            <NavMenu></NavMenu>
+        </AuthorizeView>
         <article class="content px-4">
             @Body
         </article>

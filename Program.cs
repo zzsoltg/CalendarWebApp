@@ -41,6 +41,26 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+
+    options.Events.OnRedirectToReturnUrl = context =>
+    {
+        context.Response.Redirect("/Calendar");
+        return Task.CompletedTask;
+    };
+
+    options.Events.OnRedirectToLogout = context =>
+    {
+        context.Response.Redirect("/Account/Login");
+        return Task.CompletedTask;
+    };
+});
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

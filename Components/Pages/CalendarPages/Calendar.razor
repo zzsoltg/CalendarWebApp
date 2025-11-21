@@ -1,6 +1,11 @@
 ﻿@page "/calendar"
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
 @using CalendarWebApp.Repository.IRepository
 @using MyAppointment = RadzenBlazorDemos.Appointment
+
 @inject DialogService DialogService
 @inject IAppointmentRepository _appointmentRepository
 @inject Radzen.TooltipService TooltipService
