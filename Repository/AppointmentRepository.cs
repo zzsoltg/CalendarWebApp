@@ -32,9 +32,13 @@ namespace CalendarWebApp.Repository
             return false;
         }
 
-        public async Task<IEnumerable<Appointment>> GetAllAsync()
+        public async Task<IEnumerable<Appointment>> GetAllAsync(string? userId = null)
         {
-            return await _db.Appointment.ToListAsync();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return new List<Appointment>();
+            }
+            return await _db.Appointment.Where(a => a.UserId == userId).ToListAsync();
         }
 
         public async Task<Appointment> GetAsync(int id)

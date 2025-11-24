@@ -1,4 +1,7 @@
-﻿@inject DialogService DialogService
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+@inject DialogService DialogService
+@inject AuthenticationStateProvider _AuthenticationStateProvider
 
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
     <RadzenStack Gap="1rem">
@@ -42,6 +45,14 @@
     Appointment model = new Appointment();
 
     private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+        model.UserId = userId;
+    }
 
     protected override void OnParametersSet()
     {

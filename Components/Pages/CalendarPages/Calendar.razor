@@ -1,5 +1,6 @@
 ﻿@page "/calendar"
 
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 
@@ -9,6 +10,7 @@
 @inject DialogService DialogService
 @inject IAppointmentRepository _appointmentRepository
 @inject Radzen.TooltipService TooltipService
+@inject AuthenticationStateProvider _AuthenticationStateProvider
 
 @if (IsProcessing)
 {
@@ -36,9 +38,9 @@ else
 }
 
 @code {
-    RadzenScheduler<MyAppointment> scheduler;
-    // EventConsole console;
-    Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+        RadzenScheduler<MyAppointment> scheduler;
+        // EventConsole console;
+        Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
     private bool IsProcessing { get; set; } = true;
 
     bool showHeader = true;
@@ -57,7 +59,10 @@ else
 
     private async Task LoadAppointments()
     {
-        appointments = await _appointmentRepository.GetAllAsync();
+        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+        appointments = await _appointmentRepository.GetAllAsync(userId);
     }
 
     void OnDaySelect(SchedulerDaySelectEventArgs args)
@@ -109,7 +114,8 @@ else
             Start = args.Data.Start,
             End = args.Data.End,
             Text = args.Data.Text,
-            Type = args.Data.Type
+            Type = args.Data.Type,
+            UserId = args.Data.UserId
         };
 
         var data = await DialogService.OpenAsync<EditAppointmentPage>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } });
@@ -135,13 +141,13 @@ else
         switch (args.Data.Type)
         {
             case "Szabadság":
-                args.Attributes["style"] = "background: green";
+                args.Attributes["style"] = "background: #66BB6A";
                 break;
             case "HomeOffice":
-                args.Attributes["style"] = "background: blue";
+                args.Attributes["style"] = "background: #FFA000";
                 break;
             case "Képzés":
-                args.Attributes["style"] = "background: red";
+                args.Attributes["style"] = "background: #EF5350";
                 break;
         }
 
