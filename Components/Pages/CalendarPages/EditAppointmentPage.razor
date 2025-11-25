@@ -29,8 +29,26 @@
                             AllowClear="true" />
         </RadzenStack>
 
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Descripiton" Style="width: 4rem;" />
+            <RadzenLabel Text=" " Style="width: 1rem;" />
+            <RadzenHtmlEditor @bind-Value=@model.Description style="height: 300px; width: 12 rem;" UploadUrl="upload/image">
+                <RadzenHtmlEditorUndo />
+                <RadzenHtmlEditorRedo />
+                <RadzenHtmlEditorSeparator />
+                <RadzenHtmlEditorBold />
+                <RadzenHtmlEditorItalic />
+                <RadzenHtmlEditorUnderline />
+                <RadzenHtmlEditorStrikeThrough />
+                <RadzenHtmlEditorSeparator />
+                <RadzenHtmlEditorColor />
+                <RadzenHtmlEditorBackground />
+                <RadzenHtmlEditorRemoveFormat />
+            </RadzenHtmlEditor>
+        </RadzenStack>
+
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
-            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Text="Delete" Click=@OnDelete Variant="Variant.Flat"/>
+            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Text="Delete" Click=@OnDelete Variant="Variant.Flat" />
             <RadzenButton ButtonType="ButtonType.Submit" Text="Save" />
         </RadzenStack>
     </RadzenStack>

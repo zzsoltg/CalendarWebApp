@@ -6,28 +6,46 @@
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
     <RadzenStack Gap="1rem">
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Title" Style="width: 4rem;" />
+            <RadzenLabel Text="Title" Style="width: 6rem;" />
             <RadzenTextBox @bind-Value="@model.Text" Name="Text" Style="width: 12rem;" />
             <RadzenRequiredValidator Component="Text" Text="Title is required" />
         </RadzenStack>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Start" Style="width: 4rem;" />
+            <RadzenLabel Text="Start" Style="width: 6rem;" />
             <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="true" Style="width: 12rem;" />
             <RadzenRequiredValidator Component="Start" Text="Start is required" />
         </RadzenStack>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="End" Style="width: 4rem;" />
+            <RadzenLabel Text="End" Style="width: 6rem;" />
             <RadzenDatePicker Name="End" @bind-Value="@model.End" ShowTime="true" Style="width: 12rem;" />
             <RadzenRequiredValidator Component="End" Text="End is required" />
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Type" Style="width: 4rem;" />
+            <RadzenLabel Text="Type" Style="width: 6rem;" />
             <RadzenDropDown @bind-Value="model.Type"
                             Data="@typeOptions"
                             Style="width: 12rem;"
                             Placeholder="(nincs)"
                             AllowClear="true" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Descripiton" Style="width: 4rem;" />
+            <RadzenLabel Text=" " Style="width: 1rem;" />
+            <RadzenHtmlEditor @bind-Value=@model.Description style="height: 300px; width: 12 rem;" UploadUrl="upload/image">
+                <RadzenHtmlEditorUndo />
+                <RadzenHtmlEditorRedo />
+                <RadzenHtmlEditorSeparator />
+                <RadzenHtmlEditorBold />
+                <RadzenHtmlEditorItalic />
+                <RadzenHtmlEditorUnderline />
+                <RadzenHtmlEditorStrikeThrough />
+                <RadzenHtmlEditorSeparator />
+                <RadzenHtmlEditorColor />
+                <RadzenHtmlEditorBackground />
+                <RadzenHtmlEditorRemoveFormat />
+            </RadzenHtmlEditor>
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">

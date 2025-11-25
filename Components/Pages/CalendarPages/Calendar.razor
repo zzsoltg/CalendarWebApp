@@ -115,6 +115,7 @@ else
             End = args.Data.End,
             Text = args.Data.Text,
             Type = args.Data.Type,
+            Description = args.Data.Description,
             UserId = args.Data.UserId
         };
 
@@ -176,6 +177,7 @@ else
         }
     }
 
+    // Improved tooltip: render HTML when present, preserve newlines for plain text, limit height and allow scrolling
     void OnAppointmentMouseEnter(SchedulerAppointmentMouseEventArgs<Appointment> args)
     {
         static bool IsSingleDay(Appointment a)
@@ -195,9 +197,14 @@ else
             </RadzenText>
             @if (args.Data.Type != null)
             {
-                <RadzenText TextStyle="TextStyle.Caption" class="rz-mb-4" Style="color: var(--rz-tooltip-color);">
-                    Type: @args.Data.Type
-                </RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
+                    <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
+                        <strong>Type</strong>
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
+                        @args.Data.Type
+                    </RadzenText>
+                </RadzenStack>
             }
             <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
                 <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
@@ -215,11 +222,43 @@ else
                     @args.Data.End.ToString("hh:mm ⋅ dddd, MMMM d")
                 </RadzenText>
             </RadzenStack>
+
+            @if (args.Data.Description != null)
+            {
+                <RadzenStack Orientation="Orientation.Vertical" Style="align-items:flex-start; margin-top: 8px;">
+                    <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-tooltip-color); width: 64px;">
+                        <strong>Description</strong>
+                    </RadzenText>
+                    <div style="max-height:150px; overflow:auto; white-space:pre-wrap; word-break:break-word; color: var(--rz-tooltip-color); font-size:0.95rem;">
+                        @FormatDescription(args.Data.Description)
+                    </div>
+                </RadzenStack>
+            }
         </RadzenStack>, new TooltipOptions { Position = position, Duration = null });
     }
 
     void OnAppointmentMouseLeave(SchedulerAppointmentMouseEventArgs<Appointment> args)
     {
         TooltipService.Close();
+    }
+
+    private static MarkupString FormatDescription(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        var trimmed = description!.Trim();
+
+        if (trimmed.Contains("<") && trimmed.Contains(">"))
+        {
+            return new MarkupString(trimmed);
+        }
+
+        var encoded = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(trimmed)
+            .Replace("\r\n", "<br/>")
+            .Replace("\n", "<br/>");
+        return new MarkupString(encoded);
     }
 }
