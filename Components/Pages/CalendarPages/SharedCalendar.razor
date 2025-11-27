@@ -1,16 +1,56 @@
-﻿@page "/calendar"
+﻿@page "/sharedcalendar"
 
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
-
+@using Microsoft.AspNetCore.Identity
+@using Radzen
+@using Microsoft.EntityFrameworkCore
 @using CalendarWebApp.Repository.IRepository
 @using MyAppointment = RadzenBlazorDemos.Appointment
+@using CalendarWebApp.Data
+@attribute [Authorize]
 
 @inject DialogService DialogService
 @inject IAppointmentRepository _appointmentRepository
 @inject Radzen.TooltipService TooltipService
 @inject AuthenticationStateProvider _AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+
+
+<RadzenCard Variant="Variant.Outlined" class="rz-my-4">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+        <RadzenCheckBox @bind-Value=@allowRowSelectOnRowClick Name="CheckBox1" />
+        <RadzenLabel Text="Allow row select on row click" Component="CheckBox1" />
+        <RadzenButton Text="Clear selected rows" Click="@(async args => { selectedEmployees = null; await LoadAppointments(); })" />
+    </RadzenStack>
+</RadzenCard>
+
+<RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true" FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowPaging="true" PageSize="4"
+                AllowSorting="true" Data="@employees" ColumnWidth="200px"
+                SelectionMode="DataGridSelectionMode.Multiple"
+                Value="@selectedEmployees"
+                ValueChanged="@(async (IList<ApplicationUser> args) => { selectedEmployees = args; await LoadAppointments(); })">
+    <Columns>
+        <RadzenDataGridColumn Width="60px" Sortable="false" Filterable="false">
+            <HeaderTemplate>
+                <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Select all items" } })"
+                                Value="@(selectedEmployees == null || selectedEmployees?.Any() != true ? false : !employees.All(i => selectedEmployees.Contains(i)) ? null : employees.Any(i => selectedEmployees.Contains(i)))"
+                                Change="@(async args => {
+                                    selectedEmployees = args == true ? employees.ToList() : null;
+                                    await LoadAppointments();
+                                })" />
+            </HeaderTemplate>
+            <Template Context="data">
+                <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedEmployees != null && selectedEmployees.Contains(data))" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Select item" } })"
+                                TValue="bool" Change=@(args => { if (!allowRowSelectOnRowClick) { grid.SelectRow(data); } }) />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
+        <RadzenDataGridColumn Property="@nameof(ApplicationUser.PhoneNumber)" Title="Phone number" />
+        <RadzenDataGridColumn Property="@nameof(ApplicationUser.DateOfBirth)" Title="Date of birth" FormatString="{0:d}" />
+    </Columns>
+</RadzenDataGrid>
+
 
 @if (IsProcessing)
 {
@@ -20,24 +60,35 @@
 }
 else
 {
-
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-4 rz-mb-6 rz-border-radius-1" Style="border: var(--rz-grid-cell-border);">
+        <RadzenLabel Text="Schedule Start Month:" />
+        <RadzenSelectBar @bind-Value="@startMonth" TextProperty="Text" ValueProperty="Value" Data="@(Enum.GetValues(typeof(Month)).Cast<Month>().Select(t => new { Text = $"{t}", Value = t }))" Size="ButtonSize.Small" class="rz-display-xl-flex" />
+    </RadzenStack>
     <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender style="height: 768px;" TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=true
                      TextProperty="Text" SelectedIndex="2" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
-                     SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender DaySelect="@OnDaySelect"
-                     AppointmentMove=@OnAppointmentMove>
+                     AppointmentRender=@OnAppointmentRender DaySelect="@OnDaySelect">
         <RadzenDayView />
         <RadzenWeekView />
         <RadzenMonthView />
+        <RadzenYearPlannerView StartMonth="@startMonth" />
+        <RadzenYearTimelineView StartMonth="@startMonth" />
+        <RadzenYearView StartMonth="@startMonth" />
     </RadzenScheduler>
 
     @* <EventConsole @ref=@console /> *@   
 }
 
 @code {
-        RadzenScheduler<MyAppointment> scheduler;
-        // EventConsole console;
-        Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+    RadzenScheduler<MyAppointment> scheduler;
+    // EventConsole console;
+    Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+    Month startMonth = Month.January;
     private bool IsProcessing { get; set; } = true;
+
+    bool allowRowSelectOnRowClick = true;
+    IEnumerable<ApplicationUser> employees;
+    IList<ApplicationUser>? selectedEmployees;
+    RadzenDataGrid<ApplicationUser> grid;
 
     IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
 
@@ -46,17 +97,34 @@ else
         if (firstRender)
         {
             await LoadAppointments();
-            IsProcessing = false;
-            StateHasChanged();
         }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        employees = UserManager.Users.ToList();
     }
 
     private async Task LoadAppointments()
     {
-        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
-        appointments = await _appointmentRepository.GetAllAsync(userId);
+        IsProcessing = true;
+        if (selectedEmployees != null && selectedEmployees.Any())
+        {
+            var selectedUserIds = selectedEmployees.Select(u => u.Id).ToList();
+            appointments = await _appointmentRepository.GetByUsersAsync(selectedUserIds);
+        }
+        else
+        {
+            appointments = new List<MyAppointment>();
+        }
+
+        if (scheduler != null)
+        {
+            await scheduler.Reload();
+        }
+        IsProcessing = false;
+        StateHasChanged();
     }
 
     void OnDaySelect(SchedulerDaySelectEventArgs args)
@@ -77,55 +145,25 @@ else
         {
             args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
         }
-    }
 
-    async Task OnSlotSelect(SchedulerSlotSelectEventArgs args)
-    {
-        // console.Log($"SlotSelect: Start={args.Start} End={args.End}");
-
-        if (args.View.Text != "Year")
+        // Draw a line for new year if start month is not January
+        if ((args.View.Text == "Planner" || args.View.Text == "Timeline") && args.Start.Month == 12 && startMonth != Month.January)
         {
-            MyAppointment data = await DialogService.OpenAsync<AddAppointmentPage>("Add Appointment",
-                new Dictionary<string, object> { { "Start", args.Start }, { "End", args.End } });
-
-            if (data != null)
-            {
-                await _appointmentRepository.CreateAsync(data);
-                await LoadAppointments();
-                // Either call the Reload method or reassign the Data property of the Scheduler
-                await scheduler.Reload();
-            }
+            args.Attributes["style"] = "border-bottom: thick double var(--rz-base-600);";
         }
-    }
 
-    async Task OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<MyAppointment> args)
-    {
-        // console.Log($"AppointmentSelect: Appointment={args.Data.Text}");
-
-        var copy = new MyAppointment
+        // Color the slot depending on number of appointments for that day
+        if (args.Appointments.Count() > 4)
         {
-            Id = args.Data.Id,
-            Start = args.Data.Start,
-            End = args.Data.End,
-            Text = args.Data.Text,
-            Type = args.Data.Type,
-            Description = args.Data.Description,
-            UserId = args.Data.UserId
-        };
-
-        var data = await DialogService.OpenAsync<EditAppointmentPage>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } });
-
-        if (data is MyAppointment model)
-        {
-            await _appointmentRepository.UpdateAsync(data);
-
-            await LoadAppointments();
-            await scheduler.Reload();
+            args.Attributes["style"] = "background: #ffabab;";
         }
-        else if (data is bool deleted && deleted)
+        else if (args.Appointments.Count() > 2)
         {
-            await LoadAppointments();
-            await scheduler.Reload();
+            args.Attributes["style"] = "background: #ffc988;";
+        }
+        else if (args.Appointments.Count() > 0)
+        {
+            args.Attributes["style"] = "background: #c3ffc3;";
         }
     }
 
@@ -146,29 +184,6 @@ else
                 break;
         }
 
-    }
-
-    async Task OnAppointmentMove(SchedulerAppointmentMoveEventArgs args)
-    {
-        var draggedAppointment = appointments.FirstOrDefault(x => x == args.Appointment.Data);
-
-        if (draggedAppointment != null)
-        {
-            var duration = draggedAppointment.End - draggedAppointment.Start;
-
-            if (args.SlotDate.TimeOfDay == TimeSpan.Zero)
-            {
-                draggedAppointment.Start = args.SlotDate.Date.Add(draggedAppointment.Start.TimeOfDay);
-            }
-            else
-            {
-                draggedAppointment.Start = args.SlotDate;
-            }
-
-            draggedAppointment.End = draggedAppointment.Start.Add(duration);
-
-            await scheduler.Reload();
-        }
     }
 
     // Improved tooltip: render HTML when present, preserve newlines for plain text, limit height and allow scrolling

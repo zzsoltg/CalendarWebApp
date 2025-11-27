@@ -67,6 +67,13 @@ namespace CalendarWebApp.Repository
             return obj;
         }
 
+        public async Task<IEnumerable<Appointment>> GetByUsersAsync(List<string> userIds)
+        {
+            return await _db.Appointment
+                    .Where(a => userIds.Contains(a.UserId))
+                    .ToListAsync();
+        }
+
         public async Task<Appointment> UpdateAsync(Appointment obj)
         {
             var objFromDb = await _db.Appointment.FirstOrDefaultAsync(u => u.Id == obj.Id);
