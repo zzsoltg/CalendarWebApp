@@ -9,5 +9,6 @@ namespace CalendarWebApp.Repository.IRepository
         public Task<bool> DeleteAsync(int id);
         public Task<Appointment> GetAsync(int id);
         public Task<IEnumerable<Appointment>> GetAllAsync(string? userId = null);
+        public Task<int> CalculateFreeDays(string userId, int year);
     }
 }

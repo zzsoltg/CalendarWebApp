@@ -14,6 +14,22 @@ namespace CalendarWebApp.Repository
             _db = db;
         }
 
+        public async Task<int> CalculateFreeDays(string userId, int year)
+        {
+            DateTime yearStart = new DateTime(year, 1, 1);
+            DateTime yearEnd = new DateTime(year, 12, 31);
+
+            var appointments = await _db.Appointment
+                .Where(a => a.UserId == userId
+                && a.Type == "Szabadság"
+                && a.Start.Date <= yearEnd
+                && a.End.Date >= yearStart)
+                .ToListAsync();
+            return appointments.Sum(x => (x.End.Date - x.Start.Date).Days + 1);
+
+
+        }
+
         public async Task<Appointment> CreateAsync(Appointment obj)
         {
             await _db.Appointment.AddAsync(obj);

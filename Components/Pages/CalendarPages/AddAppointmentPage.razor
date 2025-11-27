@@ -1,9 +1,15 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using CalendarWebApp.Data
+@using CalendarWebApp.Repository.IRepository
 
 @inject DialogService DialogService
 @inject AuthenticationStateProvider _AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IAppointmentRepository _appointmentRepository
 
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
+    <RadzenText>Remaining Free Days: @remainingFreeDays</RadzenText>
     <RadzenStack Gap="1rem">
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
             <RadzenLabel Text="Title" Style="width: 6rem;" />
@@ -63,13 +69,21 @@
     Appointment model = new Appointment();
 
     private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés" };
+    private int remainingFreeDays;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
-        model.UserId = userId;
+        var claimsPrincipal = authState.User;
+        var user = await UserManager.GetUserAsync(claimsPrincipal);
+
+        if (user != null)
+        {
+            model.UserId = user.Id;
+            int daysTaken = await _appointmentRepository.CalculateFreeDays(user.Id, Start.Year);
+            remainingFreeDays = user.TotalFreeDays - daysTaken;
+        }
+
     }
 
     protected override void OnParametersSet()
@@ -78,8 +92,30 @@
         model.End = End;
     }
 
-    void OnSubmit(Appointment model)
+    async Task OnSubmit(Appointment model)
     {
+        if (model.Type == "Szabadság")
+        {
+            int requestedDays = (model.End.Date - model.Start.Date).Days + 1;
+            if (requestedDays > remainingFreeDays)
+            {
+                var result = await DialogService.Confirm("Nincs elég szabadnapod a szabadság kivételéhez!", "Túl kevés szabadnap",
+                    new ConfirmOptions() { OkButtonText = "Módosítás"});
+                return;
+            }
+            if (model.Start > model.End)
+            {
+                var result = await DialogService.Confirm("Az esmemény nem kezdődhet később, mint ahogy befejeződik!", "Hiba a mentéskor",
+                    new ConfirmOptions() { OkButtonText = "Módosítás" });
+                return;
+            }
+        }
+        if (model.Start > model.End)
+        {
+            var result = await DialogService.Confirm("Az esmemény nem kezdődhet később, mint ahogy befejeződik!", "Hiba a mentéskor",
+                new ConfirmOptions() { OkButtonText = "Módosítás" });
+            return;
+        }
         DialogService.Close(model);
     }
 }
