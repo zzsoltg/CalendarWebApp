@@ -19,6 +19,11 @@ namespace CalendarWebApp.Data
                 new MyAppointment { Id = 2, Start = DateTime.Today.AddDays(-11), End = DateTime.Today.AddDays(-10), Text = "HO", Type="HomeOffice" },
                 new MyAppointment { Id = 3, Start = DateTime.Today.AddDays(-10), End = DateTime.Today.AddDays(-8), Text = "AI tanfolyam", Type="Képzés" }
             );
+
+            builder.Entity<ApplicationUser>()
+                        .Property(u => u.DateOfBirth)
+                        .HasColumnType("date");
+
         }
     }
 }
