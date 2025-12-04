@@ -81,7 +81,6 @@ namespace CalendarWebApp.Repository
             {
                 objFromDb.Start = obj.Start;
                 objFromDb.End = obj.End;
-                objFromDb.Text = obj.Text;
                 objFromDb.Type = obj.Type;
                 objFromDb.Description = obj.Description;
                 objFromDb.UserId = obj.UserId;

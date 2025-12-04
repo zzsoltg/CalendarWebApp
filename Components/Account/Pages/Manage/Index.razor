@@ -28,6 +28,11 @@
                 <label for="dateOfBirth" class="form-label">Date Of Birth</label>
             </div>
             <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" placeholder="Enter your name" />
+                <label for="Input.Name" class="form-label">Name</label>
+                <ValidationMessage For="() => Input.Name" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" />
                 <label for="Input.PhoneNumber" class="form-label">Phone number</label>
                 <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
@@ -42,6 +47,7 @@
     private string? username;
     private DateOnly? dateOfBirth;
     private string? phoneNumber;
+    private string? name;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -54,9 +60,11 @@
         user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         username = await UserManager.GetUserNameAsync(user);
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
+        name = user.Name;
         dateOfBirth = user.DateOfBirth;
 
         Input.PhoneNumber ??= phoneNumber;
+        Input.Name ??= name;
     }
 
     private async Task OnValidSubmitAsync()
@@ -70,6 +78,16 @@
             }
         }
 
+        if (Input.Name != name)
+        {
+            user.Name = Input.Name;
+            var setNameResult = await UserManager.UpdateAsync(user);
+            if (!setNameResult.Succeeded)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set name.", HttpContext);
+            }
+        }
+
         await SignInManager.RefreshSignInAsync(user);
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
@@ -79,5 +97,8 @@
         [Phone]
         [Display(Name = "Phone number")]
         public string? PhoneNumber { get; set; }
+
+        [Display(Name = "Name")]
+        public string? Name { get; set; }
     }
 }

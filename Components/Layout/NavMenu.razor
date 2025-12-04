@@ -1,10 +1,12 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using CalendarWebApp.Data
+@using CalendarWebApp.Components.Account
 
 @implements IDisposable
 
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceScopeFactory ScopeFactory
 
 
 <nav class="navbar navbar-expand-md rz-navbar-custom"
@@ -14,7 +16,7 @@
 	<div class="container-fluid px-0">
 		<a class="navbar-brand d-flex align-items-center" href="calendar" style="color:inherit;">
             <img src="/img/Logo.png" alt="Logo" width="30" height="24" class="me-2" />
-			Griff Calendar
+			GriffSync
 		</a>
 		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
 				aria-controls="navbarCollapse" aria-label="Toggle navigation" style="border-color: rgba(13,71,161,.2);">
@@ -29,7 +31,7 @@
 				</li>
 				<li class="nav-item mx-2">
 					<NavLink class="nav-link" href="/sharedcalendar" style="color:inherit;">
-						<span class="bi bi-calendar-date" aria-hidden="true"></span> Shared Calendar
+						<span class="bi bi-people-fill" aria-hidden="true"></span> Groups
 					</NavLink>
 				</li>
 			</ul>
@@ -38,7 +40,7 @@
 					<Authorized>
 						<li class="nav-item">
 							<NavLink class="nav-link p-2" href="Account/Manage" style="color:inherit;">
-								Welcome, @context?.User?.Identity?.Name
+                                Welcome, @userName
 							</NavLink>
 						</li>
 						<li class="nav-item">
@@ -59,13 +61,35 @@
 </nav>
 
 @code {
-    private string? currentUrl;
+	private string? currentUrl;
+	private string? userName;
 
-
-    protected override void OnInitialized()
+	protected async override Task OnInitializedAsync()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var userPrincipal = authState.User;
+
+		if (userPrincipal.Identity is not null && userPrincipal.Identity.IsAuthenticated)
+		{
+			using (var scope = ScopeFactory.CreateScope())
+			{
+				var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+				var userInDb = await userManager.GetUserAsync(userPrincipal);
+
+				if (userInDb != null)
+				{
+					userName = userInDb.Name;
+				}
+			}
+
+			if (string.IsNullOrEmpty(userName))
+			{
+				userName = userPrincipal.Identity.Name;
+			}
+
+		}
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

@@ -18,9 +18,11 @@
 
 
 <RadzenCard Variant="Variant.Outlined" class="rz-my-4">
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-        <RadzenCheckBox @bind-Value=@allowRowSelectOnRowClick Name="CheckBox1" />
-        <RadzenLabel Text="Allow row select on row click" Component="CheckBox1" />
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenCheckBox @bind-Value=@allowRowSelectOnRowClick Name="CheckBox1" />
+            <RadzenLabel Text="Allow row select on row click" Component="CheckBox1" />
+        </RadzenStack>
         <RadzenButton Text="Clear selected rows" Click="@(async args => { selectedEmployees = null; await LoadAppointments(); })" />
     </RadzenStack>
 </RadzenCard>
@@ -45,6 +47,7 @@
                                 TValue="bool" Change=@(args => { if (!allowRowSelectOnRowClick) { grid.SelectRow(data); } }) />
             </Template>
         </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(ApplicationUser.Name)" Title="Name" />
         <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
         <RadzenDataGridColumn Property="@nameof(ApplicationUser.PhoneNumber)" Title="Phone number" />
         <RadzenDataGridColumn Property="@nameof(ApplicationUser.DateOfBirth)" Title="Date of birth" FormatString="{0:d}" />
@@ -52,7 +55,7 @@
 </RadzenDataGrid>
 
 
-@if (IsProcessing)
+@if (isProcessing)
 {
     <div class="position-absolute w-75 h-75 d-flex flex-column align-items-center bg-white justify-content-center">
         <img src="/img/loading.gif" alt="loading" />
@@ -60,29 +63,75 @@
 }
 else
 {
-    <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender style="height: 768px;" TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=true
-                     TextProperty="Text" SelectedIndex="2" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
-                     AppointmentRender=@OnAppointmentRender DaySelect="@OnDaySelect">
-        <RadzenDayView />
-        <RadzenWeekView />
-        <RadzenMonthView />
-    </RadzenScheduler>
+    <RadzenCard Variant="Variant.Outlined" class="rz-my-4" style="background-color: whitesmoke">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-4">
+            <RadzenLabel Text="Hónap:" Style="font-weight: bold;" />
+            <RadzenDatePicker @bind-Value="@viewDate" DateFormat="yyyy MMMM" Change="@OnViewDateChanged" ShowTime="false" />
+            <RadzenText TextStyle="TextStyle.Caption">Válassz hónapot a táblázat frissítéséhez</RadzenText>
+        </RadzenStack>
 
-    @* <EventConsole @ref=@console /> *@   
+        @if (selectedEmployees != null && selectedEmployees.Any())
+        {
+            <div class="matrix-scroll-container">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th class="sticky-col">Név</th>
+                            @for (int day = 1; day <= DateTime.DaysInMonth(viewDate.Year, viewDate.Month); day++)
+                            {
+                                var currentDayDate = new DateTime(viewDate.Year, viewDate.Month, day);
+                                <th class="@(IsWeekend(currentDayDate) ? "weekend-header" : "")">
+                                    @day <br />
+                                    <small>@currentDayDate.ToString("ddd")</small>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in selectedEmployees)
+                        {
+                            <tr>
+                                <td class="sticky-col">@emp.Name</td>
+                                @for (int day = 1; day <= DateTime.DaysInMonth(viewDate.Year, viewDate.Month); day++)
+                                {
+                                    var dateToCheck = new DateTime(viewDate.Year, viewDate.Month, day);
+                                    var appointment = GetAppointmentForUserAndDate(emp.Id, dateToCheck);
+                                    var bgStyle = GetColorForType(appointment?.Type);
+
+                                    <td class="matrix-cell" style="@bgStyle" title="@(appointment?.Type ?? "")">
+                                        @if (appointment != null)
+                                        {
+                                            <span class="event-indicator">@appointment.Type?.FirstOrDefault()</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <RadzenAlert Severity="Severity.Info" Variant="Variant.Flat" Shade="Shade.Lighter">
+                Válassz ki legalább egy felhasználót a fenti listából a táblázat megtekintéséhez!
+            </RadzenAlert>
+        }
+    </RadzenCard>
 }
 
 @code {
-    RadzenScheduler<MyAppointment> scheduler;
-    // EventConsole console;
-    Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
-    private bool IsProcessing { get; set; } = true;
+    private RadzenScheduler<MyAppointment> scheduler;
+    private Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+    private bool isProcessing { get; set; } = true;
 
-    bool allowRowSelectOnRowClick = true;
-    IEnumerable<ApplicationUser> employees;
-    IList<ApplicationUser>? selectedEmployees;
-    RadzenDataGrid<ApplicationUser> grid;
+    private bool allowRowSelectOnRowClick = true;
+    private IEnumerable<ApplicationUser> employees;
+    private IList<ApplicationUser>? selectedEmployees;
+    private RadzenDataGrid<ApplicationUser> grid;
+    private DateTime viewDate = DateTime.Today;
 
-    IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
+    private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -100,7 +149,7 @@ else
 
     private async Task LoadAppointments()
     {
-        IsProcessing = true;
+        isProcessing = true;
         if (selectedEmployees != null && selectedEmployees.Any())
         {
             var selectedUserIds = selectedEmployees.Select(u => u.Id).ToList();
@@ -115,145 +164,50 @@ else
         {
             await scheduler.Reload();
         }
-        IsProcessing = false;
+        isProcessing = false;
         StateHasChanged();
     }
 
-    void OnDaySelect(SchedulerDaySelectEventArgs args)
+    private void OnViewDateChanged(DateTime? value)
     {
-        // console.Log($"DaySelect: Day={args.Day} AppointmentCount={args.Appointments.Count()}");
-    }
-
-    void OnSlotRender(SchedulerSlotRenderEventArgs args)
-    {
-        // Highlight today in month view
-        if (args.View.Text == "Month" && args.Start.Date == DateTime.Today)
+        if (value.HasValue)
         {
-            args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
-        }
-
-        // Highlight working hours (8-17)
-        if ((args.View.Text == "Week" || args.View.Text == "Day") && args.Start.Hour > 7 && args.Start.Hour < 18)
-        {
-            args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
-        }
-
-        // Color the slot depending on number of appointments for that day
-        if (args.Appointments.Count() > 4)
-        {
-            args.Attributes["style"] = "background: #ffabab;";
-        }
-        else if (args.Appointments.Count() > 2)
-        {
-            args.Attributes["style"] = "background: #ffc988;";
-        }
-        else if (args.Appointments.Count() > 0)
-        {
-            args.Attributes["style"] = "background: #c3ffc3;";
+            viewDate = value.Value;
+            StateHasChanged();
         }
     }
 
-    void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<MyAppointment> args)
+    private bool IsWeekend(DateTime date)
     {
-        // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
-
-        switch (args.Data.Type)
-        {
-            case "Szabadság":
-                args.Attributes["style"] = "background: #66BB6A";
-                break;
-            case "HomeOffice":
-                args.Attributes["style"] = "background: #FFA000";
-                break;
-            case "Képzés":
-                args.Attributes["style"] = "background: #EF5350";
-                break;
-        }
-
+        return date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
     }
 
-    // Improved tooltip: render HTML when present, preserve newlines for plain text, limit height and allow scrolling
-    void OnAppointmentMouseEnter(SchedulerAppointmentMouseEventArgs<Appointment> args)
+    private MyAppointment? GetAppointmentForUserAndDate(string userId, DateTime date)
     {
-        static bool IsSingleDay(Appointment a)
+        if (appointments == null)
         {
-            var startDate = a.Start.Date;
-            var effectiveEndDate = a.End.TimeOfDay == TimeSpan.Zero ? a.End.Date.AddDays(-1) : a.End.Date;
-            return startDate == effectiveEndDate;
+            return null;
         }
-
-        bool onlySunday = IsSingleDay(args.Data) && args.Data.Start.DayOfWeek == DayOfWeek.Sunday;
-        var position = onlySunday ? TooltipPosition.Left : TooltipPosition.Top;
-
-        TooltipService.Open(args.Element, ts =>
-        @<RadzenStack Orientation="Orientation.Vertical" Gap="0" class="rz-p-6" Style="min-width: 250px; max-width: 500px;">
-            <RadzenText TextStyle="TextStyle.H4" class="rz-mb-4" Style="color: var(--rz-tooltip-color);">
-                @args.Data.Text
-            </RadzenText>
-            @if (args.Data.Type != null)
-            {
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
-                    <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
-                        <strong>Type</strong>
-                    </RadzenText>
-                    <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
-                        @args.Data.Type
-                    </RadzenText>
-                </RadzenStack>
-            }
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
-                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
-                    <strong>Start</strong>
-                </RadzenText>
-                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
-                    @args.Data.Start.ToString("hh:mm ⋅ dddd, MMMM d")
-                </RadzenText>
-            </RadzenStack>
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
-                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
-                    <strong>End</strong>
-                </RadzenText>
-                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
-                    @args.Data.End.ToString("hh:mm ⋅ dddd, MMMM d")
-                </RadzenText>
-            </RadzenStack>
-
-            @if (args.Data.Description != null)
-            {
-                <RadzenStack Orientation="Orientation.Vertical" Style="align-items:flex-start; margin-top: 8px;">
-                    <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-tooltip-color); width: 64px;">
-                        <strong>Description</strong>
-                    </RadzenText>
-                    <div style="max-height:150px; overflow:auto; white-space:pre-wrap; word-break:break-word; color: var(--rz-tooltip-color); font-size:0.95rem;">
-                        @FormatDescription(args.Data.Description)
-                    </div>
-                </RadzenStack>
-            }
-        </RadzenStack>, new TooltipOptions { Position = position, Duration = null });
+        return appointments.FirstOrDefault(a =>
+            (a.UserId == userId) &&
+            a.Start.Date <= date.Date &&
+            a.End.Date >= date.Date
+        );
     }
 
-    void OnAppointmentMouseLeave(SchedulerAppointmentMouseEventArgs<Appointment> args)
+    private string GetColorForType(string? type)
     {
-        TooltipService.Close();
-    }
-
-    private static MarkupString FormatDescription(string? description)
-    {
-        if (string.IsNullOrWhiteSpace(description))
+        if (string.IsNullOrEmpty(type))
         {
-            return new MarkupString(string.Empty);
+            return "";
         }
 
-        var trimmed = description!.Trim();
-
-        if (trimmed.Contains("<") && trimmed.Contains(">"))
+        return type switch
         {
-            return new MarkupString(trimmed);
-        }
-
-        var encoded = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(trimmed)
-            .Replace("\r\n", "<br/>")
-            .Replace("\n", "<br/>");
-        return new MarkupString(encoded);
+            "Szabadság" => "background-color: #66BB6A;",
+            "HomeOffice" => "background-color: #FFA000;",
+            "Képzés" => "background-color: #EF5350;",
+            "Táppénz" => "background-color: #90A4AE;"
+        };
     }
 }

@@ -1,0 +1,56 @@
+﻿/* SharedCalendar.razor.css */
+
+.matrix-scroll-container {
+    overflow-x: auto;
+    width: 100%;
+    border: 1px solid var(--rz-border-color);
+    border-radius: var(--rz-border-radius);
+}
+
+.matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--rz-text-font-family);
+    font-size: 0.875rem;
+}
+
+    .matrix-table th, .matrix-table td {
+        border: 1px solid var(--rz-border-color);
+        padding: 4px;
+        text-align: center;
+        min-width: 35px;
+    }
+
+    .matrix-table th {
+        background-color: var(--rz-base-200);
+        font-weight: 600;
+        color: var(--rz-text-title-color);
+    }
+
+.sticky-col {
+    position: sticky;
+    left: 0;
+    background-color: white;
+    z-index: 2;
+    text-align: left !important;
+    padding-left: 10px !important;
+    min-width: 150px;
+    border-right: 2px solid var(--rz-border-color);
+    font-weight: bold;
+}
+
+.weekend-header {
+    background-color: var(--rz-base-300);
+    color: var(--rz-text-disabled-color);
+}
+
+.matrix-cell {
+    cursor: default;
+    transition: opacity 0.2s;
+    color: white;
+    font-weight: bold;
+}
+
+    .matrix-cell:hover {
+        opacity: 0.8;
+    }

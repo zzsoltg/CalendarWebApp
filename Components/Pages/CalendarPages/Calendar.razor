@@ -12,7 +12,9 @@
 @inject Radzen.TooltipService TooltipService
 @inject AuthenticationStateProvider _AuthenticationStateProvider
 
-@if (IsProcessing)
+<PageTitle>GriffSync</PageTitle>
+
+@if (isProcessing)
 {
     <div class="position-absolute w-75 h-75 d-flex flex-column align-items-center bg-white justify-content-center">
         <img src="/img/loading.gif" alt="loading" />
@@ -22,31 +24,25 @@ else
 {
 
     <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender style="height: 768px;" TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=true
-                     TextProperty="Text" SelectedIndex="2" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
-                     SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender DaySelect="@OnDaySelect"
+                     TextProperty="Type" SelectedIndex="0" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
+                     SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender
                      AppointmentMove=@OnAppointmentMove>
-        <RadzenDayView />
-        <RadzenWeekView />
         <RadzenMonthView />
     </RadzenScheduler>
-
-    @* <EventConsole @ref=@console /> *@   
 }
 
 @code {
-        RadzenScheduler<MyAppointment> scheduler;
-        // EventConsole console;
-        Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
-    private bool IsProcessing { get; set; } = true;
-
-    IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
+    private RadzenScheduler<MyAppointment> scheduler;
+    private Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+    private bool isProcessing { get; set; } = true;
+    private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await LoadAppointments();
-            IsProcessing = false;
+            isProcessing = false;
             StateHasChanged();
         }
     }
@@ -59,55 +55,87 @@ else
         appointments = await _appointmentRepository.GetAllAsync(userId);
     }
 
-    void OnDaySelect(SchedulerDaySelectEventArgs args)
+    private void OnSlotRender(SchedulerSlotRenderEventArgs args)
     {
-        // console.Log($"DaySelect: Day={args.Day} AppointmentCount={args.Appointments.Count()}");
-    }
-
-    void OnSlotRender(SchedulerSlotRenderEventArgs args)
-    {
-        // Highlight today in month view
         if (args.View.Text == "Month" && args.Start.Date == DateTime.Today)
         {
             args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
         }
-
-        // Highlight working hours (8-17)
-        if ((args.View.Text == "Week" || args.View.Text == "Day") && args.Start.Hour > 7 && args.Start.Hour < 18)
-        {
-            args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
-        }
     }
 
-    async Task OnSlotSelect(SchedulerSlotSelectEventArgs args)
+    private async Task OnSlotSelect(SchedulerSlotSelectEventArgs args)
     {
-        // console.Log($"SlotSelect: Start={args.Start} End={args.End}");
+        var existingAppointment = appointments.FirstOrDefault(x => x.Start.Date == args.Start.Date);
 
-        if (args.View.Text != "Year")
+        if (existingAppointment != null)
         {
-            MyAppointment data = await DialogService.OpenAsync<AddAppointmentPage>("Add Appointment",
-                new Dictionary<string, object> { { "Start", args.Start }, { "End", args.End } });
-
-            if (data != null)
+            var copy = new MyAppointment
             {
-                await _appointmentRepository.CreateAsync(data);
+                Id = existingAppointment.Id,
+                Start = existingAppointment.Start,
+                End = existingAppointment.End,
+                Type = existingAppointment.Type,
+                Description = existingAppointment.Description,
+                UserId = existingAppointment.UserId
+            };
+
+            var data = await DialogService.OpenAsync<EditAppointmentPage>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } });
+
+            if (data is MyAppointment model)
+            {
+                await _appointmentRepository.UpdateAsync(data);
+
                 await LoadAppointments();
-                // Either call the Reload method or reassign the Data property of the Scheduler
                 await scheduler.Reload();
+            }
+            else if (data is bool deleted && deleted)
+            {
+                await LoadAppointments();
+                await scheduler.Reload();
+            }
+        }
+        else
+        {
+            if (args.View.Text != "Year")
+            {
+                MyAppointment data = await DialogService.OpenAsync<AddAppointmentPage>("Add Appointment",
+                    new Dictionary<string, object> { { "Start", args.Start } });
+
+                if (data != null)
+                {
+                    data.Start = data.Start.Date;
+                    data.End = data.Start.Date.AddDays(1).AddSeconds(-1);
+
+                    var targetDate = data.Start.Date;
+                    var checkAppointment = appointments.FirstOrDefault(x => x.Start.Date == targetDate);
+
+                    if (checkAppointment != null)
+                    {
+                        checkAppointment.Type = data.Type;
+                        checkAppointment.Description = data.Description;
+
+                        await _appointmentRepository.UpdateAsync(checkAppointment);
+                    }
+                    else
+                    {
+                        await _appointmentRepository.CreateAsync(data);
+                    }
+
+                    await LoadAppointments();
+                    // Either call the Reload method or reassign the Data property of the Scheduler
+                    await scheduler.Reload();
+                }
             }
         }
     }
 
-    async Task OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<MyAppointment> args)
+    private async Task OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<MyAppointment> args)
     {
-        // console.Log($"AppointmentSelect: Appointment={args.Data.Text}");
-
         var copy = new MyAppointment
         {
             Id = args.Data.Id,
             Start = args.Data.Start,
             End = args.Data.End,
-            Text = args.Data.Text,
             Type = args.Data.Type,
             Description = args.Data.Description,
             UserId = args.Data.UserId
@@ -117,7 +145,25 @@ else
 
         if (data is MyAppointment model)
         {
-            await _appointmentRepository.UpdateAsync(data);
+
+            model.Start = model.Start.Date;
+            model.End = model.Start.Date.AddDays(1).AddSeconds(-1);
+
+            var targetDate = model.Start.Date;
+            var checkAppointment = appointments.FirstOrDefault(x => x.Id != model.Id && x.Start.Date == targetDate);
+
+            if (checkAppointment != null)
+            {
+                checkAppointment.Type = model.Type;
+                checkAppointment.Description = model.Description;
+
+                await _appointmentRepository.UpdateAsync(checkAppointment);
+                await _appointmentRepository.DeleteAsync(model.Id);
+            }
+            else
+            {
+                await _appointmentRepository.UpdateAsync(data);
+            }
 
             await LoadAppointments();
             await scheduler.Reload();
@@ -129,7 +175,7 @@ else
         }
     }
 
-    void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<MyAppointment> args)
+    private void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<MyAppointment> args)
     {
         // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
 
@@ -144,34 +190,43 @@ else
             case "Képzés":
                 args.Attributes["style"] = "background: #EF5350";
                 break;
+            case "Táppénz":
+                args.Attributes["style"] = "backgorund: #90A4AE";
+                break;
         }
 
     }
 
-    async Task OnAppointmentMove(SchedulerAppointmentMoveEventArgs args)
+    private async Task OnAppointmentMove(SchedulerAppointmentMoveEventArgs args)
     {
+        var targetDate = args.SlotDate.Date;
         var draggedAppointment = appointments.FirstOrDefault(x => x == args.Appointment.Data);
 
         if (draggedAppointment != null)
         {
-            var duration = draggedAppointment.End - draggedAppointment.Start;
+            var existingAppointment = appointments.FirstOrDefault(x => x.Start.Date == targetDate && x.Id != draggedAppointment.Id);
 
-            if (args.SlotDate.TimeOfDay == TimeSpan.Zero)
+            if (existingAppointment != null)
             {
-                draggedAppointment.Start = args.SlotDate.Date.Add(draggedAppointment.Start.TimeOfDay);
+                existingAppointment.Type = draggedAppointment.Type;
+                existingAppointment.Description = draggedAppointment.Description;
+                await _appointmentRepository.UpdateAsync(existingAppointment);
+                await _appointmentRepository.DeleteAsync(draggedAppointment.Id);
             }
             else
             {
-                draggedAppointment.Start = args.SlotDate;
+                draggedAppointment.Start = targetDate;
+                draggedAppointment.End = targetDate.AddDays(1).AddSeconds(-1);
+                await _appointmentRepository.UpdateAsync(draggedAppointment);
             }
-
-            draggedAppointment.End = draggedAppointment.Start.Add(duration);
-
+            await LoadAppointments();
             await scheduler.Reload();
         }
     }
 
-    void OnAppointmentMouseEnter(SchedulerAppointmentMouseEventArgs<Appointment> args)
+
+
+    private void OnAppointmentMouseEnter(SchedulerAppointmentMouseEventArgs<Appointment> args)
     {
         static bool IsSingleDay(Appointment a)
         {
@@ -186,33 +241,14 @@ else
         TooltipService.Open(args.Element, ts =>
         @<RadzenStack Orientation="Orientation.Vertical" Gap="0" class="rz-p-6" Style="min-width: 250px; max-width: 500px;">
             <RadzenText TextStyle="TextStyle.H4" class="rz-mb-4" Style="color: var(--rz-tooltip-color);">
-                @args.Data.Text
+                @args.Data.Type
             </RadzenText>
-            @if (args.Data.Type != null)
-            {
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
-                    <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
-                        <strong>Type</strong>
-                    </RadzenText>
-                    <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
-                        @args.Data.Type
-                    </RadzenText>
-                </RadzenStack>
-            }
             <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
                 <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
-                    <strong>Start</strong>
+                    <strong>Date</strong>
                 </RadzenText>
                 <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
-                    @args.Data.Start.ToString("hh:mm ⋅ dddd, MMMM d")
-                </RadzenText>
-            </RadzenStack>
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
-                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
-                    <strong>End</strong>
-                </RadzenText>
-                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
-                    @args.Data.End.ToString("hh:mm ⋅ dddd, MMMM d")
+                    @args.Data.Start.ToString("dddd, MMMM d")
                 </RadzenText>
             </RadzenStack>
 
@@ -230,7 +266,7 @@ else
         </RadzenStack>, new TooltipOptions { Position = position, Duration = null });
     }
 
-    void OnAppointmentMouseLeave(SchedulerAppointmentMouseEventArgs<Appointment> args)
+    private void OnAppointmentMouseLeave(SchedulerAppointmentMouseEventArgs<Appointment> args)
     {
         TooltipService.Close();
     }

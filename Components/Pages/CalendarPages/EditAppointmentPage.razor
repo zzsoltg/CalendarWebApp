@@ -11,29 +11,22 @@
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
     <RadzenText>Remaining Free Days: @remainingFreeDays</RadzenText>
     <RadzenStack Gap="1rem">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Title" Style="width: 6rem;" />
-            <RadzenTextBox @bind-Value="@model.Text" Name="Text" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="Text" Text="Title is required" />
-        </RadzenStack>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Start" Style="width: 6rem;" />
-            <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="true" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="Start" Text="Start is required" />
-        </RadzenStack>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="End" Style="width: 6rem;" />
-            <RadzenDatePicker Name="End" @bind-Value="@model.End" ShowTime="true" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="End" Text="End is required" />
-        </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
             <RadzenLabel Text="Type" Style="width: 6rem;" />
             <RadzenDropDown @bind-Value="model.Type"
+                            Name="Type"
                             Data="@typeOptions"
                             Style="width: 12rem;"
-                            Placeholder="(nincs)"
-                            AllowClear="true" />
+                            Placeholder="(chosse a type)"
+                            AllowClear="false" />
+            <RadzenRequiredValidator Component="Type" Text="Type is required" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Date" Style="width: 6rem;" />
+            <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="false" Style="width: 12rem;" DateFormat="yyyy.MM.dd" />
+            <RadzenRequiredValidator Component="Start" Text="Date is required" />
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
@@ -63,10 +56,9 @@
 @code {
     [Parameter]
     public Appointment Appointment { get; set; }
+    public Appointment model = new Appointment();
 
-    Appointment model = new Appointment();
-
-    private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés" };
+    private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés", "Táppénz" };
     private int remainingFreeDays;
 
     protected override void OnParametersSet()
@@ -87,8 +79,9 @@
 
     }
 
-    async Task OnSubmit(Appointment model)
+    protected async Task OnSubmit(Appointment model)
     {
+        model.End = model.Start.AddDays(1).AddSeconds(-1);
         if (model.Type == "Szabadság")
         {
             int requestedDays = (model.End.Date - model.Start.Date).Days + 1;
@@ -104,12 +97,6 @@
                     new ConfirmOptions() { OkButtonText = "Módosítás" });
                 return;
             }
-        }
-        if (model.Start > model.End)
-        {
-            var result = await DialogService.Confirm("Az esmemény nem kezdődhet később, mint ahogy befejeződik!", "Hiba a mentéskor",
-                new ConfirmOptions() { OkButtonText = "Módosítás" });
-            return;
         }
         DialogService.Close(model);
     }
