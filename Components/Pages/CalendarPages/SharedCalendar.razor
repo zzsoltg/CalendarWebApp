@@ -4,28 +4,41 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Radzen
+@using System.Collections
 @using Microsoft.EntityFrameworkCore
 @using CalendarWebApp.Repository.IRepository
 @using MyAppointment = RadzenBlazorDemos.Appointment
 @using CalendarWebApp.Data
 @attribute [Authorize]
 
-@inject DialogService DialogService
 @inject IAppointmentRepository _appointmentRepository
-@inject Radzen.TooltipService TooltipService
-@inject AuthenticationStateProvider _AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
 
 
-<RadzenCard Variant="Variant.Outlined" class="rz-my-4">
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenCheckBox @bind-Value=@allowRowSelectOnRowClick Name="CheckBox1" />
-            <RadzenLabel Text="Allow row select on row click" Component="CheckBox1" />
-        </RadzenStack>
-        <RadzenButton Text="Clear selected rows" Click="@(async args => { selectedEmployees = null; await LoadAppointments(); })" />
-    </RadzenStack>
-</RadzenCard>
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.5rem" class="rz-p-sm-12">
+    <RadzenLabel Text="Szűrés csoportra" Component="DropDownGroupingMultiSelect" Style="margin-right: 8px; vertical-align: middle;" />
+
+    <RadzenDropDown @ref=dd @bind-Value=@values TValue="IEnumerable<string>" AllowClear="true" Name="DropDownGroupingMultiSelect" Change="@(args => FilterEmployees())"
+                    Data=@groupedData Style="width: 100%; max-width: 400px;" ItemRender="ItemRender">
+        <HeaderTemplate>
+            <RadzenStack Orientation="Orientation.Horizontal" class="rz-multiselect-header rz-dropdown-filter-container rz-helper-clearfix">
+                <RadzenCheckBox TValue="bool?" TriState=false Value="@AreAllSelected()" Change="@SelectAll" title="@(dd.SelectAllText)" Disabled=@(!groupedData.Any()) />
+                <input id="@($"{dd.SearchID}")" @oninput=@Search placeholder="Keresés..." class="rz-inputtext" role="textbox" type="text"
+                       aria-label="@(dd.SearchAriaLabel)" style="margin-inline-start:0.5rem;width:100%;border:0;background:transparent;" />
+            </RadzenStack>
+        </HeaderTemplate>
+        <Template>
+            <RadzenCheckBox TValue="bool?" TriState=false Value="@IsGroupSelected(context)" Change="@(args => SelectGroup(args, (GroupItem)context))" />
+
+            <RadzenLabel Style=@($"margin-inline-start: 0.5rem; font-weight: {(context.Organization != null ? "bold" : "normal")}")
+                         Text="@(context.Organization ?? context.GroupName)"
+                         onclick="event.target.previousElementSibling.querySelector('.rz-chkbox-box').click()" />
+        </Template>
+        <ValueTemplate>
+            @string.Join(", ", values ?? Enumerable.Empty<string>())
+        </ValueTemplate>
+    </RadzenDropDown>
+</RadzenStack>
 
 <RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true" FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowPaging="true" PageSize="4"
                 AllowSorting="true" Data="@employees" ColumnWidth="200px"
@@ -51,6 +64,8 @@
         <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
         <RadzenDataGridColumn Property="@nameof(ApplicationUser.PhoneNumber)" Title="Phone number" />
         <RadzenDataGridColumn Property="@nameof(ApplicationUser.DateOfBirth)" Title="Date of birth" FormatString="{0:d}" />
+        <RadzenDataGridColumn Property="@nameof(ApplicationUser.Organisation)" Title="Organisation" />
+        <RadzenDataGridColumn Property="@nameof(ApplicationUser.Group)" Title="Group" />
     </Columns>
 </RadzenDataGrid>
 
@@ -120,9 +135,8 @@ else
     </RadzenCard>
 }
 
+
 @code {
-    private RadzenScheduler<MyAppointment> scheduler;
-    private Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
     private bool isProcessing { get; set; } = true;
 
     private bool allowRowSelectOnRowClick = true;
@@ -130,6 +144,43 @@ else
     private IList<ApplicationUser>? selectedEmployees;
     private RadzenDataGrid<ApplicationUser> grid;
     private DateTime viewDate = DateTime.Today;
+
+    private RadzenDropDown<IEnumerable<string>> dd;
+    private IEnumerable<string> values;
+    private IEnumerable<GroupItem> groupedData = new List<GroupItem>();
+    private string search;
+
+    private readonly List<OrganizationDef> organizationDefinitions = new List<OrganizationDef>
+    {
+        new OrganizationDef
+        {
+            Name = "Infrastruktúra és szolgáltatások",
+            Groups = new List<string> { "Webfejlesztés", "Informatika", "Alaprendszer" }
+        },
+        new OrganizationDef
+        {
+            Name = "Forrás-termékfejlesztés",
+            Groups = new List<string> { "Egyedi fejlesztések", "Pénzügy" }
+        },
+        new OrganizationDef
+        {
+            Name = "Projektigazgatóság",
+            Groups = new List<string> { "Logisztika" }
+        }
+    };
+
+    private class GroupItem
+    {
+        public string Organization { get; set; }
+        public string GroupName { get; set; }
+        public IEnumerable<string> Children { get; set; } = Enumerable.Empty<string>();
+    }
+
+    private class OrganizationDef
+    {
+        public string Name { get; set; }
+        public IEnumerable<string> Groups { get; set; }
+    }
 
     private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
 
@@ -144,7 +195,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        employees = UserManager.Users.ToList();
+        await Populate();
+        FilterEmployees();
     }
 
     private async Task LoadAppointments()
@@ -158,11 +210,6 @@ else
         else
         {
             appointments = new List<MyAppointment>();
-        }
-
-        if (scheduler != null)
-        {
-            await scheduler.Reload();
         }
         isProcessing = false;
         StateHasChanged();
@@ -209,5 +256,116 @@ else
             "Képzés" => "background-color: #EF5350;",
             "Táppénz" => "background-color: #90A4AE;"
         };
+    }
+
+    private void ItemRender(DropDownItemRenderEventArgs<IEnumerable<string>> args)
+    {
+        args.Disabled = true;
+        var item = (GroupItem)args.Item;
+        args.Attributes.Add("style", $"opacity:1;{(item.Organization == null ? "margin-inline-start:1rem" : "")}");
+    }
+
+    private async Task Populate()
+    {
+        var filteredDefs = organizationDefinitions.Select(org => new OrganizationDef
+        {
+            Name = org.Name,
+            Groups = string.IsNullOrEmpty(search) ? org.Groups :
+                     org.Groups.Where(g => g.ToLower().Contains(search.ToLower()) || org.Name.ToLower().Contains(search.ToLower())).ToList()
+        }).Where(org => org.Groups.Any()).ToList();
+        
+        groupedData = await Task.FromResult(filteredDefs
+            .SelectMany(org =>
+                new GroupItem[] { new GroupItem { Organization = org.Name, Children = org.Groups } }
+                .Concat(org.Groups.Select(g => new GroupItem { GroupName = g }))
+            ).ToList());
+    }
+
+    private bool? AreAllSelected()
+    {
+        var allDataItems = groupedData.Where(x => x.Organization == null).ToList();
+
+        if (!allDataItems.Any()) return false;
+
+        var selectedCount = allDataItems.Count(g => values?.Contains(g.GroupName) == true);
+
+        return selectedCount == allDataItems.Count ? true :
+               selectedCount > 0 ? null : false;
+    }
+
+    private bool? IsGroupSelected(GroupItem item)
+    {
+        if (item.Organization != null)
+        {
+            if (!item.Children.Any()) return false;
+
+            var selectedChildren = item.Children.Count(childName => values?.Contains(childName) == true);
+
+            return selectedChildren == item.Children.Count() ? true :
+                   selectedChildren > 0 ? null : false;
+        }
+
+        return values?.Contains(item.GroupName) == true;
+    }
+
+    private void SelectGroup(bool? value, GroupItem item)
+    {
+        var currentValues = (values ?? Enumerable.Empty<string>()).ToList();
+
+        IEnumerable<string> itemsToToggle;
+
+        if (item.Organization != null)
+        {
+            itemsToToggle = item.Children;
+        }
+        else
+        {
+            itemsToToggle = new[] { item.GroupName };
+        }
+
+        if (value == true)
+        {
+            foreach (var g in itemsToToggle)
+            {
+                if (!currentValues.Contains(g)) currentValues.Add(g);
+            }
+        }
+        else
+        {
+            foreach (var g in itemsToToggle)
+            {
+                currentValues.Remove(g);
+            }
+        }
+
+        values = currentValues;
+        FilterEmployees();
+    }
+
+    private void SelectAll(bool? value)
+    {
+        values = value == true ? groupedData.Where(x => x.Organization == null).Select(x => x.GroupName).ToList() : Enumerable.Empty<string>();
+        FilterEmployees();
+    }
+
+    private void FilterEmployees()
+    {
+        if (values == null || !values.Any())
+        {
+            employees = UserManager.Users.ToList();
+        }
+        else
+        {
+            employees = UserManager.Users.Where(u => values.Contains(u.Group)).ToList();
+        }
+
+        selectedEmployees = null;
+        StateHasChanged();
+    }
+
+    private async Task Search(ChangeEventArgs args)
+    {
+        search = $"{args.Value}";
+        await Populate();
     }
 }

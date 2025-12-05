@@ -5,9 +5,24 @@ namespace CalendarWebApp.Data
     // Add profile data for application users by adding properties to the ApplicationUser class
     public class ApplicationUser : IdentityUser
     {
-        public string? Name { get; set; }
+        public string Name { get; set; }
         public DateOnly DateOfBirth { get; set; }
+        public string? Group { get; set; }
         public int BaseFreeDays => 20;
+
+        public string? Organisation
+        {
+            get
+            {
+                if (Group == "Webfejlesztés" ||
+                    Group == "Informatika" ||
+                    Group == "Alaprendszer") return "Infrastruktúra és szolgáltatások";
+                if (Group == "Egyedi fejlesztések" ||
+                    Group == "Pénzügy") return "Forrás-termékfejlesztés";
+                if (Group == "Logisztika") return "Projektigazgatóság";
+                return null;
+            }
+        }
 
         public int AgeBasedExtraFreeDays
         {

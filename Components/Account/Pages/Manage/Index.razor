@@ -28,9 +28,25 @@
                 <label for="dateOfBirth" class="form-label">Date Of Birth</label>
             </div>
             <div class="form-floating mb-3">
+                <input type="text" value="@organisation" id="organisation" class="form-control" placeholder="Choose your organisation" disabled />
+                <label for="organisation" class="form-label">Organisation</label>
+            </div>
+            <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" placeholder="Enter your name" />
                 <label for="Input.Name" class="form-label">Name</label>
                 <ValidationMessage For="() => Input.Name" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputSelect @bind-Value="Input.Group" id="Input.Group" class="form-control" autocomplete="Group" aria-required="true">
+                    <option value="">--- Choose a group ---</option>
+
+                    @foreach (var group in groupTypes)
+                    {
+                        <option value="@group">@group</option>
+                    }
+                </InputSelect>
+                <label for="group">Group</label>
+                <ValidationMessage For="@(() => Input.Group)" class="text-danger"/>
             </div>
             <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" />
@@ -48,6 +64,9 @@
     private DateOnly? dateOfBirth;
     private string? phoneNumber;
     private string? name;
+    private string? group;
+    private string? organisation;
+    private readonly string[] groupTypes = { "Webfejlesztés", "Informatika", "Alaprendszer", "Egyedi fejlesztések", "Pénzügy", "Logisztika" };
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -62,9 +81,12 @@
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
         name = user.Name;
         dateOfBirth = user.DateOfBirth;
+        group = user.Group;
+        organisation = user.Organisation;
 
         Input.PhoneNumber ??= phoneNumber;
         Input.Name ??= name;
+        Input.Group ??= group;
     }
 
     private async Task OnValidSubmitAsync()
@@ -88,6 +110,16 @@
             }
         }
 
+        if (Input.Group != group)
+        {
+            user.Group = Input.Group;
+            var setGroupResult = await UserManager.UpdateAsync(user);
+            if (!setGroupResult.Succeeded)
+            {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set name.", HttpContext);
+            }
+        }
+
         await SignInManager.RefreshSignInAsync(user);
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
@@ -100,5 +132,8 @@
 
         [Display(Name = "Name")]
         public string? Name { get; set; }
+
+        [Display(Name = "Group")]
+        public string? Group { get; set; }
     }
 }

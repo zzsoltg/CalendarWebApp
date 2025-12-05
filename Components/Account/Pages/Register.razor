@@ -55,6 +55,18 @@
                                     <ValidationMessage For="@(() => Input.DateOfBirth)" />
                                 </div>
                                 <div class="form-floating mb-3">
+                                    <InputSelect @bind-Value="Input.Group" class="form-control" autocomplete="Group" aria-required="true">
+                                        <option value="">--- Choose a group ---</option>
+
+                                        @foreach (var group in groupTypes)
+                                        {
+                                            <option value="@group">@group</option>
+                                        }
+                                    </InputSelect>
+                                    <label for="group">Group</label>
+                                    <ValidationMessage For="@(() => Input.Group)" />
+                                </div>
+                                <div class="form-floating mb-3">
                                     <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
                                     <label for="password">Password</label>
                                     <ValidationMessage For="() => Input.Password" class="text-danger" />
@@ -93,6 +105,7 @@
     private string? ReturnUrl { get; set; }
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+    private readonly string[] groupTypes = { "Webfejlesztés", "Informatika", "Alaprendszer", "Egyedi fejlesztések", "Pénzügy", "Logisztika" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -114,6 +127,7 @@
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
         user.DateOfBirth = Input.DateOfBirth;
         user.Name = Input.Name;
+        user.Group = Input.Group;
         var result = await UserManager.CreateAsync(user, Input.Password);
 
         if (!result.Succeeded)
@@ -173,11 +187,15 @@
         [Display(Name = "Name")]
         public string Name { get; set; } = "";
 
-
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]
         public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Text)]
+        [Display(Name = "Group")]
+        public string Group { get; set; } = "";
 
         [Required]
         [DataType(DataType.Date)]
