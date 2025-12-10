@@ -1,5 +1,12 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Open Sans', sans-serif;
+    background-image: url('img/login_backround.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+    background-color: transparent;
 }
 
 a, .btn-link {
@@ -53,7 +60,7 @@ h1:focus {
 
 
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Open Sans', sans-serif;
 }
 
 a, .btn-link {
@@ -118,18 +125,111 @@ h1:focus {
 }
 
 span.nav-link {
-    color: #212529 !important;
+    color: #212529;
 }
 
 
 
     span.nav-link.active {
         border-bottom: 3px solid #198754;
-        color: #198754 !important;
+        color: #198754;
     }
 
 
 
 .mark-up-string * {
-    background: transparent !important;
+    background: transparent;
 }
+
+
+
+.glass-dialog {
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background-color: transparent;
+}
+
+    .glass-dialog .rz-dialog-titlebar {
+        background: rgba(255, 255, 255, 0.65);
+        color: #233D4D;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .glass-dialog .rz-dialog-title {
+        font-weight: 900;
+        text-transform: uppercase;
+        font-size: 1.2rem;
+        color: #233D4D;
+    }
+
+    .glass-dialog .rz-dialog-titlebar-close {
+        color: #233D4D;
+        transition: transform 0.2s;
+    }
+
+        .glass-dialog .rz-dialog-titlebar-close:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+        }
+
+    .glass-dialog .rz-dialog-content {
+        background: rgba(255, 255, 255, 0.65);
+        color: #233D4D;
+        border-radius: 0 0 10px 10px;
+    }
+
+    .glass-dialog .rz-label {
+        color: #233D4D;
+        font-weight: 600;
+    }
+
+    .glass-dialog .rz-dropdown,
+    .glass-dialog .rz-inputtext,
+    .glass-dialog .rz-spinner {
+        background-color: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        color: #233D4D;
+        border-radius: 8px;
+        box-shadow: inset 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .glass-dialog .rz-dropdown-label {
+        color: #233D4D;
+    }
+
+    .glass-dialog .rz-html-editor {
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .glass-dialog .rz-html-editor-toolbar {
+        background: rgba(255, 255, 255, 0.5);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .glass-dialog .rz-html-editor-content {
+        background: rgba(255, 255, 255, 0.3);
+        color: #233D4D;
+    }
+
+    .glass-dialog .rz-button {
+        border-radius: 8px;
+        font-weight: 600;
+        text-transform: uppercase;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+        .glass-dialog .rz-button.rz-primary {
+            background-color: #233D4D;
+            color: #ffffff;
+        }
+
+        .glass-dialog .rz-button.rz-danger {
+            background-color: rgba(220, 53, 69, 0.8);
+            backdrop-filter: blur(2px);
+        }

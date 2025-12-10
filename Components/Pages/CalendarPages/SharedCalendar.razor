@@ -14,31 +14,31 @@
 @inject IAppointmentRepository _appointmentRepository
 @inject UserManager<ApplicationUser> UserManager
 
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.5rem" class="rz-p-sm-12">
+        <RadzenLabel Text="Szűrés csoportra" Component="DropDownGroupingMultiSelect" Style="margin-right: 8px; vertical-align: middle;" />
 
-<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.5rem" class="rz-p-sm-12">
-    <RadzenLabel Text="Szűrés csoportra" Component="DropDownGroupingMultiSelect" Style="margin-right: 8px; vertical-align: middle;" />
+        <RadzenDropDown @ref=dd @bind-Value=@values TValue="IEnumerable<string>" AllowClear="true" Name="DropDownGroupingMultiSelect" Change="@(args => FilterEmployees())"
+                        Data=@groupedData Style="width: 100%; max-width: 400px;" ItemRender="ItemRender">
+            <HeaderTemplate>
+                <RadzenStack Orientation="Orientation.Horizontal" class="rz-multiselect-header rz-dropdown-filter-container rz-helper-clearfix">
+                    <RadzenCheckBox TValue="bool?" TriState=false Value="@AreAllSelected()" Change="@SelectAll" title="@(dd.SelectAllText)" Disabled=@(!groupedData.Any()) />
+                    <input id="@($"{dd.SearchID}")" @oninput=@Search placeholder="Keresés..." class="rz-inputtext" role="textbox" type="text"
+                           aria-label="@(dd.SearchAriaLabel)" style="margin-inline-start:0.5rem;width:100%;border:0;background:transparent;" />
+                </RadzenStack>
+            </HeaderTemplate>
+            <Template>
+                <RadzenCheckBox TValue="bool?" TriState=false Value="@IsGroupSelected(context)" Change="@(args => SelectGroup(args, (GroupItem)context))" />
 
-    <RadzenDropDown @ref=dd @bind-Value=@values TValue="IEnumerable<string>" AllowClear="true" Name="DropDownGroupingMultiSelect" Change="@(args => FilterEmployees())"
-                    Data=@groupedData Style="width: 100%; max-width: 400px;" ItemRender="ItemRender">
-        <HeaderTemplate>
-            <RadzenStack Orientation="Orientation.Horizontal" class="rz-multiselect-header rz-dropdown-filter-container rz-helper-clearfix">
-                <RadzenCheckBox TValue="bool?" TriState=false Value="@AreAllSelected()" Change="@SelectAll" title="@(dd.SelectAllText)" Disabled=@(!groupedData.Any()) />
-                <input id="@($"{dd.SearchID}")" @oninput=@Search placeholder="Keresés..." class="rz-inputtext" role="textbox" type="text"
-                       aria-label="@(dd.SearchAriaLabel)" style="margin-inline-start:0.5rem;width:100%;border:0;background:transparent;" />
-            </RadzenStack>
-        </HeaderTemplate>
-        <Template>
-            <RadzenCheckBox TValue="bool?" TriState=false Value="@IsGroupSelected(context)" Change="@(args => SelectGroup(args, (GroupItem)context))" />
+                <RadzenLabel Style=@($"margin-inline-start: 0.5rem; font-weight: {(context.Organization != null ? "bold" : "normal")}")
+                             Text="@(context.Organization ?? context.GroupName)"
+                             onclick="event.target.previousElementSibling.querySelector('.rz-chkbox-box').click()" />
+            </Template>
+            <ValueTemplate>
+                @string.Join(", ", values ?? Enumerable.Empty<string>())
+            </ValueTemplate>
+        </RadzenDropDown>
+    </RadzenStack>
 
-            <RadzenLabel Style=@($"margin-inline-start: 0.5rem; font-weight: {(context.Organization != null ? "bold" : "normal")}")
-                         Text="@(context.Organization ?? context.GroupName)"
-                         onclick="event.target.previousElementSibling.querySelector('.rz-chkbox-box').click()" />
-        </Template>
-        <ValueTemplate>
-            @string.Join(", ", values ?? Enumerable.Empty<string>())
-        </ValueTemplate>
-    </RadzenDropDown>
-</RadzenStack>
 
 <RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true" FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowPaging="true" PageSize="4"
                 AllowSorting="true" Data="@employees" ColumnWidth="200px"

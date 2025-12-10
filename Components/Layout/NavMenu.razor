@@ -9,14 +9,11 @@
 @inject IServiceScopeFactory ScopeFactory
 
 
-<nav class="navbar navbar-expand-md rz-navbar-custom"
-     style="margin:1rem; border-radius:0.5rem; box-shadow:0 4px 12px rgba(13,71,161,.06); padding:0.5rem 1rem;
-            background:#e3f2fd; color:#0d47a1; border:1px solid rgba(13,71,161,.12);
-            font-family:var(--rz-font-family, 'Roboto', 'Helvetica', Arial, sans-serif);">
+<nav class="glass-nav navbar navbar-expand-md">
 	<div class="container-fluid px-0">
 		<a class="navbar-brand d-flex align-items-center" href="calendar" style="color:inherit;">
-            <img src="/img/Logo.png" alt="Logo" width="30" height="24" class="me-2" />
-			GriffSync
+            <img src="/img/G-Call_logo_transparent.png" alt="Logo" width="130" height="90" class="me-2" />
+			G-CALL
 		</a>
 		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
 				aria-controls="navbarCollapse" aria-label="Toggle navigation" style="border-color: rgba(13,71,161,.2);">
@@ -26,12 +23,12 @@
 			<ul class="navbar-nav me-auto mb-2 mb-md-0">
 				<li class="nav-item mx-2">
 					<NavLink class="nav-link" href="/calendar" style="color:inherit;">
-						<span class="bi bi-calendar-date" aria-hidden="true"></span> Calendar
+						<span class="bi bi-calendar-date" aria-hidden="true"></span> CALENDAR
 					</NavLink>
 				</li>
 				<li class="nav-item mx-2">
 					<NavLink class="nav-link" href="/sharedcalendar" style="color:inherit;">
-						<span class="bi bi-people-fill" aria-hidden="true"></span> Groups
+						<span class="bi bi-people-fill" aria-hidden="true"></span> GROUPS
 					</NavLink>
 				</li>
 			</ul>
@@ -39,16 +36,16 @@
 				<AuthorizeView>
 					<Authorized>
 						<li class="nav-item">
-							<NavLink class="nav-link p-2" href="Account/Manage" style="color:inherit;">
+							<NavLink class="nav-link p-2" href="Account/Manage" style="color:inherit; text-transform: uppercase;">
                                 Welcome, @userName
 							</NavLink>
 						</li>
 						<li class="nav-item">
 							<form action="Account/Logout" method="post" class="m-0">
 								<AntiforgeryToken />
-                                <input type="hidden" name="ReturnUrl" value="Account/Login" />
+                                <input type="hidden" name="ReturnUrl" value="Account/LoginD" />
 								<button type="submit" class="btn btn-sm"
-                                        style="background:#0d47a1; color:#fff; border:none;">
+										style="background:#233D4D; color:#fff; border:none; border-radius:8px">
 									<span class="bi bi-box-arrow-right" aria-hidden="true"></span> Logout
 								</button>
 							</form>

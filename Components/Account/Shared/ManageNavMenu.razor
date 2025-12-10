@@ -3,29 +3,38 @@
 
 @inject SignInManager<ApplicationUser> SignInManager
 
-<ul class="nav nav-pills flex-column">
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/Email">Email</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/ChangePassword">Password</NavLink>
-    </li>
-    @if (hasExternalLogins)
-    {
+<div class="d-flex justify-content-center w-100">
+    <ul class="nav nav-pills flex-column w-100" style="max-width: 300px;">
         <li class="nav-item">
-            <NavLink class="nav-link" href="Account/Manage/ExternalLogins">External logins</NavLink>
+            <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">
+                <span class="bi bi-person-circle me-2"></span> Profile
+            </NavLink>
         </li>
-    }
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/TwoFactorAuthentication">Two-factor authentication</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/PersonalData">Personal data</NavLink>
-    </li>
-</ul>
+        <li class="nav-item">
+            <NavLink class="nav-link" href="Account/Manage/Email">
+                <span class="bi bi-envelope me-2"></span> Email
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link" href="Account/Manage/ChangePassword">
+                <span class="bi bi-key me-2"></span> Password
+            </NavLink>
+        </li>
+        @if (hasExternalLogins)
+        {
+            <li class="nav-item">
+                <NavLink class="nav-link" href="Account/Manage/ExternalLogins">
+                    <span class="bi bi-box-arrow-in-right me-2"></span> External logins
+                </NavLink>
+            </li>
+        }
+        <li class="nav-item">
+            <NavLink class="nav-link" href="Account/Manage/PersonalData">
+                <span class="bi bi-hdd-network me-2"></span> Personal data
+            </NavLink>
+        </li>
+    </ul>
+</div>
 
 @code {
     private bool hasExternalLogins;

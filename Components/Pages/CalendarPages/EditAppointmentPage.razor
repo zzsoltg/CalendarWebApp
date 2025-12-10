@@ -104,7 +104,7 @@
     protected async Task OnDelete()
     {
         var confirm = await DialogService.Confirm("Biztosan törölni szeretné ezt az időpontot?", "Törlés megerősítése",
-            new ConfirmOptions() { OkButtonText = "Igen", CancelButtonText = "Nem" });
+            new ConfirmOptions() { OkButtonText = "Igen", CancelButtonText = "Nem", CssClass = "glass-dialog" });
 
         if (confirm == true)
         {

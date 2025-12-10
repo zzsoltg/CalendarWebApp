@@ -1,0 +1,84 @@
+﻿.liquid-calendar-wrapper ::deep .rz-scheduler {
+    color: #233D4D;
+    font-family: 'Open Sans', sans-serif;
+    height: 650px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.liquid-calendar-wrapper ::deep .rz-scheduler-nav {
+    background-color: transparent;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+    .liquid-calendar-wrapper ::deep .rz-scheduler-nav .rz-button {
+        background-color: rgba(35, 61, 77);
+        color: #FFFFFF;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+        .liquid-calendar-wrapper ::deep .rz-scheduler-nav .rz-button:hover {
+            background-color: #233D4D;
+            color: white;
+        }
+
+        .liquid-calendar-wrapper ::deep .rz-scheduler-nav .rz-button.rz-state-active {
+            background-color: #233D4D;
+            color: white;
+        }
+
+
+
+.liquid-calendar-wrapper ::deep .rz-scheduler-nav-title {
+    color: #233D4D;
+    font-weight: 900;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+}
+
+.liquid-calendar-wrapper ::deep .rz-view-header {
+    background-color: transparent;
+    color: #233D4D;
+}
+
+    .liquid-calendar-wrapper ::deep .rz-view-header th {
+        background-color: transparent;
+        color: #233D4D;
+        font-weight: 900;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        padding: 10px 0;
+    }
+
+.liquid-calendar-wrapper ::deep .rz-view-content,
+.liquid-calendar-wrapper ::deep .rz-scheduler-content-table {
+    background-color: transparent;
+}
+
+
+.liquid-calendar-wrapper ::deep .rz-view-content,
+.liquid-calendar-wrapper ::deep .rz-scheduler-content-table {
+    background-color: transparent;
+}
+
+.liquid-calendar-wrapper ::deep .rz-scheduler-month-day-title {
+    color: #233D4D;
+    font-weight: 900;
+    opacity: 0.7;
+}
+
+.liquid-calendar-wrapper ::deep .rz-event {
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    backdrop-filter: blur(2px);
+    font-weight: 500;
+}
+
+.liquid-calendar-wrapper ::deep .rz-scheduler-view-month {
+    border: none;
+}
