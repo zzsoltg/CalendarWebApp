@@ -28,12 +28,12 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    background-color: transparent !important;
+    background-color: transparent;
 }
 
 main {
     flex: 1;
-    background-color: transparent !important;
+    background-color: transparent;
     display: flex;
     flex-direction: column;
 }
@@ -101,8 +101,8 @@ main {
         }
 
     .top-row, article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
+        padding-left: 2rem;
+        padding-right: 1.5rem;
     }
 }
 

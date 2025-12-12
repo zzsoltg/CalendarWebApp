@@ -12,7 +12,7 @@
 @inject Radzen.TooltipService TooltipService
 @inject AuthenticationStateProvider _AuthenticationStateProvider
 
-<PageTitle>G-Call</PageTitle>
+<PageTitle>Naptár - G-Call</PageTitle>
 
 
     @if (isProcessing)
@@ -28,8 +28,8 @@
                             TextProperty="Type" SelectedIndex="0" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
                             SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender
                             AppointmentMove=@OnAppointmentMove>
-                <RadzenMonthView />
-            </RadzenScheduler>
+              <RadzenMonthView />
+        </RadzenScheduler>
      </article>
     }
 
@@ -81,7 +81,7 @@
                 UserId = existingAppointment.UserId
             };
 
-            var data = await DialogService.OpenAsync<EditAppointmentPage>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } }, new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+            var data = await DialogService.OpenAsync<EditAppointmentPage>("Szerkesztés", new Dictionary<string, object> { { "Appointment", copy } }, new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
 
             if (data is MyAppointment model)
             {
@@ -100,7 +100,7 @@
         {
             if (args.View.Text != "Year")
             {
-                MyAppointment data = await DialogService.OpenAsync<AddAppointmentPage>("Add Appointment",
+                MyAppointment data = await DialogService.OpenAsync<AddAppointmentPage>("Esemény hozzáadása",
                     new Dictionary<string, object> { { "Start", args.Start } }, new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
 
                 if (data != null)
@@ -143,7 +143,7 @@
             UserId = args.Data.UserId
         };
 
-        var data = await DialogService.OpenAsync<EditAppointmentPage>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } }, new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+        var data = await DialogService.OpenAsync<EditAppointmentPage>("Szerkesztés", new Dictionary<string, object> { { "Appointment", copy } }, new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
 
         if (data is MyAppointment model)
         {

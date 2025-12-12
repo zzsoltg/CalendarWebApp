@@ -18,6 +18,7 @@
     .liquid-calendar-wrapper ::deep .rz-scheduler-nav .rz-button {
         background-color: rgba(35, 61, 77);
         color: #FFFFFF;
+        font-weight: 600;
         border-radius: 8px;
         transition: all 0.3s ease;
     }
@@ -32,7 +33,9 @@
             color: white;
         }
 
-
+.liquid-calendar-wrapper ::deep .rz-view-selector {
+    display: none; /* NEM MŰKÖDIK */
+}
 
 .liquid-calendar-wrapper ::deep .rz-scheduler-nav-title {
     color: #233D4D;
@@ -65,6 +68,16 @@
 .liquid-calendar-wrapper ::deep .rz-scheduler-content-table {
     background-color: transparent;
 }
+
+
+.liquid-calendar-wrapper ::deep .rz-slot {
+    transition: all 0.3s ease;
+}
+
+    .liquid-calendar-wrapper ::deep .rz-slot:hover {
+        background: rgba(255, 255, 255, 0.4);
+        box-shadow: inset 0 0 15px rgba(255,255,255,0.6);
+    }
 
 .liquid-calendar-wrapper ::deep .rz-scheduler-month-day-title {
     color: #233D4D;

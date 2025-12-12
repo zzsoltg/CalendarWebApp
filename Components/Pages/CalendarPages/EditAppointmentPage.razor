@@ -9,28 +9,28 @@
 @inject IAppointmentRepository _appointmentRepository
 
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
-    <RadzenText>Remaining Free Days: @remainingFreeDays</RadzenText>
+    <RadzenText>Hátralévő szabadnapok: @remainingFreeDays</RadzenText>
     <RadzenStack Gap="1rem">
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Type" Style="width: 6rem;" />
+            <RadzenLabel Text="Típus" Style="width: 6rem;" />
             <RadzenDropDown @bind-Value="model.Type"
                             Name="Type"
                             Data="@typeOptions"
                             Style="width: 12rem;"
                             Placeholder="(chosse a type)"
                             AllowClear="false" />
-            <RadzenRequiredValidator Component="Type" Text="Type is required" />
+            <RadzenRequiredValidator Component="Type" Text="Kötelező típust választani" />
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Date" Style="width: 6rem;" />
+            <RadzenLabel Text="Dátum" Style="width: 6rem;" />
             <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="false" Style="width: 12rem;" DateFormat="yyyy.MM.dd" />
-            <RadzenRequiredValidator Component="Start" Text="Date is required" />
+            <RadzenRequiredValidator Component="Start" Text="Kötelező dátumot választani" />
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Descripiton" Style="width: 4rem;" />
+            <RadzenLabel Text="Leírás" Style="width: 4rem;" />
             <RadzenLabel Text=" " Style="width: 1rem;" />
             <RadzenHtmlEditor @bind-Value=@model.Description style="height: 300px; width: 12 rem;" UploadUrl="upload/image">
                 <RadzenHtmlEditorUndo />
@@ -48,8 +48,8 @@
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
-            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Text="Delete" Click=@OnDelete Variant="Variant.Flat" />
-            <RadzenButton ButtonType="ButtonType.Submit" Text="Save" />
+            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Text="Törlés" Click=@OnDelete Variant="Variant.Flat" />
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Mentés" />
         </RadzenStack>
     </RadzenStack>
 </RadzenTemplateForm>

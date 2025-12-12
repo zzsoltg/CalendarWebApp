@@ -16,6 +16,7 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IdentityRedirectManager RedirectManager
+@inject RoleManager<IdentityRole> RoleManager
 
 <PageTitle>Register</PageTitle>
 
@@ -53,6 +54,13 @@
                                     <InputDate @bind-Value="Input.DateOfBirth" class="form-control" autocomplete="DateOfBirth" aria-required="true"></InputDate>
                                     <label for="dateOfBirth">Date Of Birth</label>
                                     <ValidationMessage For="@(() => Input.DateOfBirth)" />
+                                </div>
+                                <div class="form-floating mb-3">
+                                    <InputSelect @bind-Value="Input.Role" class="form-select">
+                                        <option value="alkalmazott" selected>Alkalmazott</option>
+                                        <option value="csoportvezeto">Csoportvezető</option>
+                                        <option value="god">God Mode</option>
+                                    </InputSelect>
                                 </div>
                                 <div class="form-floating mb-3">
                                     <InputSelect @bind-Value="Input.Group" class="form-control" autocomplete="Group" aria-required="true">
@@ -137,6 +145,26 @@
         }
 
         Logger.LogInformation("User created a new account with password.");
+        
+        
+        if (!await RoleManager.RoleExistsAsync("alkalmazott"))
+        {
+            await RoleManager.CreateAsync(new IdentityRole("alkalmazott"));
+            await RoleManager.CreateAsync(new IdentityRole("csoportvezeto"));
+            await RoleManager.CreateAsync(new IdentityRole("god"));
+        }
+        
+
+        if (Input.Role is not null)
+        {
+            await UserManager.AddToRoleAsync(user, Input.Role);
+        }
+        else
+        {
+            await UserManager.AddToRoleAsync(user, "alkalmazott");
+        }
+        
+
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
@@ -201,6 +229,11 @@
         [DataType(DataType.Date)]
         [Display(Name = "Date of Birth")]
         public DateOnly DateOfBirth { get; set; } = DateOnly.FromDateTime(DateTime.Now);
+
+        [Required]
+        [DataType(DataType.Text)]
+        [Display(Name = "Role")]
+        public string Role { get; set; } = "alkalmazott";
 
         [Required]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]

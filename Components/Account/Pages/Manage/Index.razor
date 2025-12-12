@@ -30,6 +30,10 @@
                         <label for="dateOfBirth" class="form-label">Date Of Birth</label>
                     </div>
                     <div class="form-floating mb-3">
+                        <input type="text" value="@role" id="role" class="form-control" placeholder="Choose your role" disabled />
+                        <label for="role" class="form-label">Role</label>
+                    </div>
+                    <div class="form-floating mb-3">
                         <input type="text" value="@organisation" id="organisation" class="form-control" placeholder="Choose your organisation" disabled />
                         <label for="dateOfBirth" class="form-label">Date Of Birth</label>
                     </div>
@@ -73,6 +77,7 @@
     private string? name;
     private string? group;
     private string? organisation;
+    private string? role;
     private readonly string[] groupTypes = { "Webfejlesztés", "Informatika", "Alaprendszer", "Egyedi fejlesztések", "Pénzügy", "Logisztika" };
 
     [CascadingParameter]
@@ -86,6 +91,7 @@
         user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         username = await UserManager.GetUserNameAsync(user);
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
+        role = (await UserManager.GetRolesAsync(user)).FirstOrDefault();
         name = user.Name;
         dateOfBirth = user.DateOfBirth;
         group = user.Group;

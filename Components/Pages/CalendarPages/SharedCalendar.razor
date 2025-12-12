@@ -14,127 +14,129 @@
 @inject IAppointmentRepository _appointmentRepository
 @inject UserManager<ApplicationUser> UserManager
 
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.5rem" class="rz-p-sm-12">
-        <RadzenLabel Text="Szűrés csoportra" Component="DropDownGroupingMultiSelect" Style="margin-right: 8px; vertical-align: middle;" />
+<div class="liquid-calendar-wrapper rz-p-4">
 
-        <RadzenDropDown @ref=dd @bind-Value=@values TValue="IEnumerable<string>" AllowClear="true" Name="DropDownGroupingMultiSelect" Change="@(args => FilterEmployees())"
-                        Data=@groupedData Style="width: 100%; max-width: 400px;" ItemRender="ItemRender">
-            <HeaderTemplate>
-                <RadzenStack Orientation="Orientation.Horizontal" class="rz-multiselect-header rz-dropdown-filter-container rz-helper-clearfix">
-                    <RadzenCheckBox TValue="bool?" TriState=false Value="@AreAllSelected()" Change="@SelectAll" title="@(dd.SelectAllText)" Disabled=@(!groupedData.Any()) />
-                    <input id="@($"{dd.SearchID}")" @oninput=@Search placeholder="Keresés..." class="rz-inputtext" role="textbox" type="text"
-                           aria-label="@(dd.SearchAriaLabel)" style="margin-inline-start:0.5rem;width:100%;border:0;background:transparent;" />
-                </RadzenStack>
-            </HeaderTemplate>
-            <Template>
-                <RadzenCheckBox TValue="bool?" TriState=false Value="@IsGroupSelected(context)" Change="@(args => SelectGroup(args, (GroupItem)context))" />
+    <div class="glass-section rz-mb-4">
+        <RadzenText TextStyle="TextStyle.H5" class="section-title">Csoportok és Munkatársak</RadzenText>
 
-                <RadzenLabel Style=@($"margin-inline-start: 0.5rem; font-weight: {(context.Organization != null ? "bold" : "normal")}")
-                             Text="@(context.Organization ?? context.GroupName)"
-                             onclick="event.target.previousElementSibling.querySelector('.rz-chkbox-box').click()" />
-            </Template>
-            <ValueTemplate>
-                @string.Join(", ", values ?? Enumerable.Empty<string>())
-            </ValueTemplate>
-        </RadzenDropDown>
-    </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-3">
+            <RadzenLabel Text="Szűrés csoportra:" Style="font-weight: 600; color: #233D4D;" />
 
-
-<RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true" FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowPaging="true" PageSize="4"
-                AllowSorting="true" Data="@employees" ColumnWidth="200px"
-                SelectionMode="DataGridSelectionMode.Multiple"
-                Value="@selectedEmployees"
-                ValueChanged="@(async (IList<ApplicationUser> args) => { selectedEmployees = args; await LoadAppointments(); })">
-    <Columns>
-        <RadzenDataGridColumn Width="60px" Sortable="false" Filterable="false">
-            <HeaderTemplate>
-                <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Select all items" } })"
-                                Value="@(selectedEmployees == null || selectedEmployees?.Any() != true ? false : !employees.All(i => selectedEmployees.Contains(i)) ? null : employees.Any(i => selectedEmployees.Contains(i)))"
-                                Change="@(async args => {
-                                    selectedEmployees = args == true ? employees.ToList() : null;
-                                    await LoadAppointments();
-                                })" />
-            </HeaderTemplate>
-            <Template Context="data">
-                <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedEmployees != null && selectedEmployees.Contains(data))" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Select item" } })"
-                                TValue="bool" Change=@(args => { if (!allowRowSelectOnRowClick) { grid.SelectRow(data); } }) />
-            </Template>
-        </RadzenDataGridColumn>
-        <RadzenDataGridColumn Property="@nameof(ApplicationUser.Name)" Title="Name" />
-        <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
-        <RadzenDataGridColumn Property="@nameof(ApplicationUser.PhoneNumber)" Title="Phone number" />
-        <RadzenDataGridColumn Property="@nameof(ApplicationUser.DateOfBirth)" Title="Date of birth" FormatString="{0:d}" />
-        <RadzenDataGridColumn Property="@nameof(ApplicationUser.Organisation)" Title="Organisation" />
-        <RadzenDataGridColumn Property="@nameof(ApplicationUser.Group)" Title="Group" />
-    </Columns>
-</RadzenDataGrid>
-
-
-@if (isProcessing)
-{
-    <div class="position-absolute w-75 h-75 d-flex flex-column align-items-center bg-white justify-content-center">
-        <img src="/img/loading.gif" alt="loading" />
-    </div>
-}
-else
-{
-    <RadzenCard Variant="Variant.Outlined" class="rz-my-4" style="background-color: whitesmoke">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-4">
-            <RadzenLabel Text="Hónap:" Style="font-weight: bold;" />
-            <RadzenDatePicker @bind-Value="@viewDate" DateFormat="yyyy MMMM" Change="@OnViewDateChanged" ShowTime="false" />
-            <RadzenText TextStyle="TextStyle.Caption">Válassz hónapot a táblázat frissítéséhez</RadzenText>
+            <RadzenDropDown @ref=dd @bind-Value=@values TValue="IEnumerable<string>" AllowClear="true"
+                            Data=@groupedData Style="width: 100%; max-width: 400px;" ItemRender="ItemRender"
+                            class="glass-dropdown">
+                <HeaderTemplate>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-2">
+                        <RadzenCheckBox TValue="bool?" TriState=false Value="@AreAllSelected()" Change="@SelectAll" title="@(dd.SelectAllText)" Disabled=@(!groupedData.Any()) />
+                        <input id="@($"{dd.SearchID}")" @oninput=@Search placeholder="Keresés..." class="glass-search-input" autocomplete="off" />
+                    </RadzenStack>
+                </HeaderTemplate>
+                <Template>
+                    <RadzenCheckBox TValue="bool?" TriState=false Value="@IsGroupSelected(context)" Change="@(args => SelectGroup(args, (GroupItem)context))" />
+                    <RadzenLabel Style=@($"margin-inline-start: 0.5rem; color: #233D4D; cursor: pointer; font-weight: {(context.Organization != null ? "800" : "500")}")
+                                 Text="@(context.Organization ?? context.GroupName)"
+                                 onclick="event.target.previousElementSibling.querySelector('.rz-chkbox-box').click()" />
+                </Template>
+                <ValueTemplate>
+                    @string.Join(", ", values ?? Enumerable.Empty<string>())
+                </ValueTemplate>
+            </RadzenDropDown>
         </RadzenStack>
 
-        @if (selectedEmployees != null && selectedEmployees.Any())
-        {
-            <div class="matrix-scroll-container">
-                <table class="matrix-table">
-                    <thead>
-                        <tr>
-                            <th class="sticky-col">Név</th>
-                            @for (int day = 1; day <= DateTime.DaysInMonth(viewDate.Year, viewDate.Month); day++)
-                            {
-                                var currentDayDate = new DateTime(viewDate.Year, viewDate.Month, day);
-                                <th class="@(IsWeekend(currentDayDate) ? "weekend-header" : "")">
-                                    @day <br />
-                                    <small>@currentDayDate.ToString("ddd")</small>
-                                </th>
-                            }
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var emp in selectedEmployees)
-                        {
+        <RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true"
+                        FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        AllowPaging="true" PageSize="5" AllowSorting="true" Data="@employees"
+                        SelectionMode="DataGridSelectionMode.Multiple"
+                        Value="@selectedEmployees"
+                        ValueChanged="@(async (IList<ApplicationUser> args) => { selectedEmployees = args; await LoadAppointments(); })"
+                        class="glass-grid">
+            <Columns>
+                <RadzenDataGridColumn Width="50px" Sortable="false" Filterable="false">
+                    <HeaderTemplate>
+                        <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?"
+                                        Value="@(selectedEmployees == null || selectedEmployees?.Any() != true ? false : !employees.All(i => selectedEmployees.Contains(i)) ? null : employees.Any(i => selectedEmployees.Contains(i)))"
+                                        Change="@(async args => { selectedEmployees = args == true ? employees.ToList() : null; await LoadAppointments(); })" />
+                    </HeaderTemplate>
+                    <Template Context="data">
+                        <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedEmployees != null && selectedEmployees.Contains(data))"
+                                        TValue="bool" Change=@(args => { if (!allowRowSelectOnRowClick) { grid.SelectRow(data); } }) />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(ApplicationUser.Name)" Title="Név" />
+                <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
+                <RadzenDataGridColumn Property="@nameof(ApplicationUser.Organisation)" Title="Szervezet" />
+                <RadzenDataGridColumn Property="@nameof(ApplicationUser.Group)" Title="Csoport" />
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+
+    @if (isProcessing)
+    {
+        <div class="d-flex flex-column align-items-center justify-content-center" style="height: 200px;">
+            <img src="/img/loading.gif" alt="loading" style="width: 50px;" />
+        </div>
+    }
+    else
+    {
+        <div class="glass-section">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-4">
+                <RadzenLabel Text="Időszak:" Style="font-weight: 800; color: #233D4D; font-size: 1.2rem;" />
+                <RadzenDatePicker @bind-Value="@viewDate" DateFormat="yyyy MMMM" Change="@OnViewDateChanged" ShowTime="false" class="glass-datepicker" />
+            </RadzenStack>
+
+            @if (selectedEmployees != null && selectedEmployees.Any())
+            {
+                <div class="matrix-scroll-container">
+                    <table class="matrix-table">
+                        <thead>
                             <tr>
-                                <td class="sticky-col">@emp.Name</td>
+                                <th class="sticky-col sticky-header">Név</th>
                                 @for (int day = 1; day <= DateTime.DaysInMonth(viewDate.Year, viewDate.Month); day++)
                                 {
-                                    var dateToCheck = new DateTime(viewDate.Year, viewDate.Month, day);
-                                    var appointment = GetAppointmentForUserAndDate(emp.Id, dateToCheck);
-                                    var bgStyle = GetColorForType(appointment?.Type);
-
-                                    <td class="matrix-cell" style="@bgStyle" title="@(appointment?.Type ?? "")">
-                                        @if (appointment != null)
-                                        {
-                                            <span class="event-indicator">@appointment.Type?.FirstOrDefault()</span>
-                                        }
-                                    </td>
+                                    var currentDayDate = new DateTime(viewDate.Year, viewDate.Month, day);
+                                    <th class="@(IsWeekend(currentDayDate) ? "weekend-header" : "") sticky-header">
+                                        <div class="day-number">@day</div>
+                                        <div class="day-name">@currentDayDate.ToString("ddd")</div>
+                                    </th>
                                 }
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-        else
-        {
-            <RadzenAlert Severity="Severity.Info" Variant="Variant.Flat" Shade="Shade.Lighter">
-                Válassz ki legalább egy felhasználót a fenti listából a táblázat megtekintéséhez!
-            </RadzenAlert>
-        }
-    </RadzenCard>
-}
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in selectedEmployees)
+                            {
+                                <tr>
+                                    <td class="sticky-col name-cell">
+                                        <div class="name-text">@emp.Name</div>
+                                    </td>
+                                    @for (int day = 1; day <= DateTime.DaysInMonth(viewDate.Year, viewDate.Month); day++)
+                                    {
+                                        var dateToCheck = new DateTime(viewDate.Year, viewDate.Month, day);
+                                        var appointment = GetAppointmentForUserAndDate(emp.Id, dateToCheck);
+                                        var bgStyle = GetColorForType(appointment?.Type);
+                                        var isWeekend = IsWeekend(dateToCheck);
 
+                                        <td class="matrix-cell @(isWeekend ? "weekend-cell" : "")" style="@bgStyle" title="@(appointment?.Type ?? "")">
+                                            @if (appointment != null)
+                                            {
+                                                <span class="event-indicator">@appointment.Type?.FirstOrDefault()</span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="glass-alert">
+                    <RadzenIcon Icon="info" /> Válassz ki legalább egy felhasználót a fenti listából a táblázat megtekintéséhez!
+                </div>
+            }
+        </div>
+    }
+</div>
 
 @code {
     private bool isProcessing { get; set; } = true;
@@ -244,17 +246,14 @@ else
 
     private string GetColorForType(string? type)
     {
-        if (string.IsNullOrEmpty(type))
-        {
-            return "";
-        }
-
+        if (string.IsNullOrEmpty(type)) return "";
         return type switch
         {
-            "Szabadság" => "background-color: #66BB6A;",
-            "HomeOffice" => "background-color: #FFA000;",
-            "Képzés" => "background-color: #EF5350;",
-            "Táppénz" => "background-color: #90A4AE;"
+            "Szabadság" => "background-color: rgba(102, 187, 106, 0.7); box-shadow: inset 0 0 5px rgba(0,0,0,0.1);",
+            "HomeOffice" => "background-color: rgba(255, 160, 0, 0.7); box-shadow: inset 0 0 5px rgba(0,0,0,0.1);",
+            "Képzés" => "background-color: rgb(239, 83, 80, 0.7); box-shadow: inset 0 0 5px rgba(0,0,0,0.1);",
+            "Táppénz" => "background-color: rgba(144, 164, 174, 0.7); box-shadow: inset 0 0 5px rgba(0,0,0,0.1);",
+            _ => ""
         };
     }
 
@@ -273,7 +272,7 @@ else
             Groups = string.IsNullOrEmpty(search) ? org.Groups :
                      org.Groups.Where(g => g.ToLower().Contains(search.ToLower()) || org.Name.ToLower().Contains(search.ToLower())).ToList()
         }).Where(org => org.Groups.Any()).ToList();
-        
+
         groupedData = await Task.FromResult(filteredDefs
             .SelectMany(org =>
                 new GroupItem[] { new GroupItem { Organization = org.Name, Children = org.Groups } }
@@ -284,13 +283,9 @@ else
     private bool? AreAllSelected()
     {
         var allDataItems = groupedData.Where(x => x.Organization == null).ToList();
-
         if (!allDataItems.Any()) return false;
-
         var selectedCount = allDataItems.Count(g => values?.Contains(g.GroupName) == true);
-
-        return selectedCount == allDataItems.Count ? true :
-               selectedCount > 0 ? null : false;
+        return selectedCount == allDataItems.Count ? true : selectedCount > 0 ? null : false;
     }
 
     private bool? IsGroupSelected(GroupItem item)
@@ -298,46 +293,27 @@ else
         if (item.Organization != null)
         {
             if (!item.Children.Any()) return false;
-
             var selectedChildren = item.Children.Count(childName => values?.Contains(childName) == true);
-
-            return selectedChildren == item.Children.Count() ? true :
-                   selectedChildren > 0 ? null : false;
+            return selectedChildren == item.Children.Count() ? true : selectedChildren > 0 ? null : false;
         }
-
         return values?.Contains(item.GroupName) == true;
     }
 
     private void SelectGroup(bool? value, GroupItem item)
     {
         var currentValues = (values ?? Enumerable.Empty<string>()).ToList();
-
         IEnumerable<string> itemsToToggle;
-
-        if (item.Organization != null)
-        {
-            itemsToToggle = item.Children;
-        }
-        else
-        {
-            itemsToToggle = new[] { item.GroupName };
-        }
+        if (item.Organization != null) itemsToToggle = item.Children;
+        else itemsToToggle = new[] { item.GroupName };
 
         if (value == true)
         {
-            foreach (var g in itemsToToggle)
-            {
-                if (!currentValues.Contains(g)) currentValues.Add(g);
-            }
+            foreach (var g in itemsToToggle) if (!currentValues.Contains(g)) currentValues.Add(g);
         }
         else
         {
-            foreach (var g in itemsToToggle)
-            {
-                currentValues.Remove(g);
-            }
+            foreach (var g in itemsToToggle) currentValues.Remove(g);
         }
-
         values = currentValues;
         FilterEmployees();
     }
@@ -350,15 +326,8 @@ else
 
     private void FilterEmployees()
     {
-        if (values == null || !values.Any())
-        {
-            employees = UserManager.Users.ToList();
-        }
-        else
-        {
-            employees = UserManager.Users.Where(u => values.Contains(u.Group)).ToList();
-        }
-
+        if (values == null || !values.Any()) employees = UserManager.Users.ToList();
+        else employees = UserManager.Users.Where(u => values.Contains(u.Group)).ToList();
         selectedEmployees = null;
         StateHasChanged();
     }

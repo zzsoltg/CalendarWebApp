@@ -9,28 +9,28 @@
 @inject IAppointmentRepository _appointmentRepository
 
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
-    <RadzenText>Remaining Free Days: @remainingFreeDays</RadzenText>
+    <RadzenText>Hátralévő szabadnapok: @remainingFreeDays</RadzenText>
     <RadzenStack Gap="1rem">
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Type" Style="width: 6rem;" />
+            <RadzenLabel Text="Típus" Style="width: 6rem;" />
             <RadzenDropDown @bind-Value="model.Type"
                             Name="Type"
                             Data="@typeOptions"
                             Style="width: 12rem;"
                             Placeholder="(nincs)"
                             AllowClear="false" />
-            <RadzenRequiredValidator Component="Type" Text="Type is required" />
+            <RadzenRequiredValidator Component="Type" Text="Kötelező típust választani" />
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Date" Style="width: 6rem;" />
+            <RadzenLabel Text="Dátum" Style="width: 6rem;" />
             <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="false" Style="width: 12rem;" DateFormat="yyyy.MM.dd" />
-            <RadzenRequiredValidator Component="Start" Text="Date is required" />
+            <RadzenRequiredValidator Component="Start" Text="Kötelező dátumot választani" />
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Descripiton" Style="width: 4rem;" />
+            <RadzenLabel Text="Leírás" Style="width: 4rem;" />
             <RadzenLabel Text=" " Style="width: 1rem;" />
             <RadzenHtmlEditor @bind-Value=@model.Description style="height: 300px; width: 12 rem;" UploadUrl="upload/image">
                 <RadzenHtmlEditorUndo />
@@ -48,7 +48,7 @@
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
-            <RadzenButton ButtonType="ButtonType.Submit" Text="Save" />
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Mentés" />
         </RadzenStack>
     </RadzenStack>
 </RadzenTemplateForm>
@@ -90,13 +90,13 @@
             if (requestedDays > remainingFreeDays)
             {
                 var result = await DialogService.Confirm("Nincs elég szabadnapod a szabadság kivételéhez!", "Túl kevés szabadnap",
-                    new ConfirmOptions() { OkButtonText = "Módosítás"});
+                    new ConfirmOptions() { OkButtonText = "Módosítás", CssClass = "glass-dialog" });
                 return;
             }
             if (model.Start > model.End)
             {
                 var result = await DialogService.Confirm("Az esmemény nem kezdődhet később, mint ahogy befejeződik!", "Hiba a mentéskor",
-                    new ConfirmOptions() { OkButtonText = "Módosítás" });
+                    new ConfirmOptions() { OkButtonText = "Módosítás", CssClass = "glass-dialog" });
                 return;
             }
         }

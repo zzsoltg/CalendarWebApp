@@ -1,56 +1,233 @@
-﻿/* SharedCalendar.razor.css */
+﻿.liquid-calendar-wrapper {
+    font-family: 'Open Sans', sans-serif;
+    color: #233D4D;
+}
+
+    .liquid-calendar-wrapper .glass-section {
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+    }
+
+    .liquid-calendar-wrapper .section-title {
+        color: #233D4D;
+        font-weight: 900;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+        opacity: 0.8;
+    }
+
+    .liquid-calendar-wrapper ::deep .glass-dropdown {
+        background-color: rgba(255, 255, 255, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        color: #233D4D;
+    }
+
+        .liquid-calendar-wrapper ::deep .glass-dropdown:hover {
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+
+.glass-search-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #233D4D;
+    font-weight: 600;
+    padding: 5px;
+    border-bottom: 1px solid rgba(35, 61, 77, 0.2);
+}
+
+    .glass-search-input:focus {
+        outline: none;
+        border-bottom: 1px solid #233D4D;
+    }
+
+
+
+.liquid-calendar-wrapper ::deep .glass-grid {
+    --rz-grid-background-color: transparent;
+    --rz-grid-content-background-color: transparent;
+    --rz-grid-header-background-color: rgba(255, 255, 255, 0.50);
+    --rz-grid-header-color: #233D4D;
+    --rz-grid-header-font-weight: 800;
+    --rz-grid-header-text-transform: uppercase;
+    --rz-grid-cell-color: #233D4D;
+    --rz-grid-cell-background-color: rgba(255, 255, 255, 0.40);
+    --rz-grid-stripe-background-color: rgba(255, 255, 255, 0.15);
+    --rz-grid-hover-background-color: rgba(255, 255, 255, 0.6);
+    --rz-grid-hover-color: #000;
+    --rz-grid-pager-color: rgba(255, 255, 255, 0.50);
+    background-color: transparent;
+    border: 1px solid white;
+    border-radius: 10px;
+    box-shadow: none;
+}
+    .liquid-calendar-wrapper ::deep .glass-grid.rz-datagrid {
+        background-color: transparent;
+    }
+
+    .liquid-calendar-wrapper ::deep .glass-grid .rz-datagrid-header {
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+        .liquid-calendar-wrapper ::deep .glass-grid .rz-datagrid-header th {
+            background-color: var(--rz-grid-header-background-color);
+            border: none !important;
+        }
+
+    .liquid-calendar-wrapper ::deep .glass-grid .rz-datagrid-data td,
+    .liquid-calendar-wrapper ::deep .glass-grid .rz-grid-table td {
+        background-color: var(--rz-grid-cell-background-color);
+    }
+
+.liquid-calendar-wrapper ::deep .glass-grid .rz-datagrid-row:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+.liquid-calendar-wrapper ::deep .rz-chkbox-box {
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 1px solid #233D4D;
+}
+
+    .liquid-calendar-wrapper ::deep .rz-chkbox-box.rz-state-active {
+        background-color: #233D4D;
+    }
+
+.liquid-calendar-wrapper ::deep .rz-pager {
+    background-color: var(--rz-grid-pager-color);
+}
+
+
+
+.liquid-calendar-wrapper ::deep .glass-datepicker input {
+    background-color: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    color: #233D4D;
+    font-weight: bold;
+}
+
 
 .matrix-scroll-container {
     overflow-x: auto;
-    width: 100%;
-    border: 1px solid var(--rz-border-color);
-    border-radius: var(--rz-border-radius);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    max-height: 70vh;
 }
 
 .matrix-table {
     width: 100%;
-    border-collapse: collapse;
-    font-family: var(--rz-text-font-family);
-    font-size: 0.875rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 1000px;
 }
 
-    .matrix-table th, .matrix-table td {
-        border: 1px solid var(--rz-border-color);
-        padding: 4px;
-        text-align: center;
-        min-width: 35px;
-    }
 
     .matrix-table th {
-        background-color: var(--rz-base-200);
-        font-weight: 600;
-        color: var(--rz-text-title-color);
+        padding: 10px 5px;
+        text-align: center;
+        color: #233D4D;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(35, 61, 77, 0.1);
+        background: rgba(255, 255, 255, 0.3);
     }
+
+        .matrix-table th.sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
 
 .sticky-col {
     position: sticky;
     left: 0;
-    background-color: white;
-    z-index: 2;
-    text-align: left !important;
-    padding-left: 10px !important;
-    min-width: 150px;
-    border-right: 2px solid var(--rz-border-color);
-    font-weight: bold;
+    z-index: 20;
+    border-right: 1px solid rgba(35, 61, 77, 0.1);
+    width: 180px;
+    min-width: 180px;
+    backdrop-filter: blur(5px);
+    color: #233D4D;
 }
 
-.weekend-header {
-    background-color: var(--rz-base-300);
-    color: var(--rz-text-disabled-color);
+.matrix-table th.sticky-col.sticky-header {
+    z-index: 30;
+}
+
+.day-number {
+    font-size: 1.1rem;
+    font-weight: 900;
+}
+
+.day-name {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+
+.matrix-table tbody tr {
+    transition: background-color 0.2s;
+}
+
+    .matrix-table tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+.name-cell {
+    padding: 10px;
+    font-weight: 600;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .matrix-cell {
-    cursor: default;
-    transition: opacity 0.2s;
-    color: white;
-    font-weight: bold;
+    width: 40px;
+    height: 40px;
+    text-align: center;
+    vertical-align: middle;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    transition: all 0.2s;
 }
 
     .matrix-cell:hover {
-        opacity: 0.8;
+        background-color: rgba(35, 61, 77, 0.1);
     }
+
+
+.matrix-table th.weekend-header {
+    background-color: rgba(35, 61, 77, 0.05);
+    color: #233D4D;
+}
+.weekend-cell {
+    background-color: rgba(35, 61, 77, 0.05);
+}
+
+.event-indicator {
+    display: inline-block;
+    color: white;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.glass-alert {
+    padding: 1rem;
+    border-radius: 8px;
+    background: rgba(35, 61, 77, 0.1);
+    color: #233D4D;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
