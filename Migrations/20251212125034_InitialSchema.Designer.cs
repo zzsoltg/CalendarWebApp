@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CalendarWebApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251127084706_AddDateOfBirthToUser")]
-    partial class AddDateOfBirthToUser
+    [Migration("20251212125034_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,21 @@ namespace CalendarWebApp.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("ApplicationUserGroup", b =>
+                {
+                    b.Property<int>("LogicalGroupsId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LogicalMembersId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("LogicalGroupsId", "LogicalMembersId");
+
+                    b.HasIndex("LogicalMembersId");
+
+                    b.ToTable("UserLogicalGroups", (string)null);
+                });
 
             modelBuilder.Entity("CalendarWebApp.Data.ApplicationUser", b =>
                 {
@@ -37,7 +52,7 @@ namespace CalendarWebApp.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateOnly?>("DateOfBirth")
+                    b.Property<DateOnly>("DateOfBirth")
                         .HasColumnType("date");
 
                     b.Property<string>("Email")
@@ -47,11 +62,18 @@ namespace CalendarWebApp.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<int>("HierarchicalGroupId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -82,6 +104,8 @@ namespace CalendarWebApp.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("HierarchicalGroupId");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -91,6 +115,45 @@ namespace CalendarWebApp.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("CalendarWebApp.Data.Group", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("OrganisationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganisationId");
+
+                    b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("CalendarWebApp.Data.Organisation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Organisations");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -243,11 +306,8 @@ namespace CalendarWebApp.Migrations
                     b.Property<DateTime>("Start")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Type")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
@@ -261,27 +321,59 @@ namespace CalendarWebApp.Migrations
                         new
                         {
                             Id = 1,
-                            End = new DateTime(2025, 11, 25, 0, 0, 0, 0, DateTimeKind.Local),
-                            Start = new DateTime(2025, 11, 25, 0, 0, 0, 0, DateTimeKind.Local),
-                            Text = "Szabi",
+                            End = new DateTime(2025, 12, 10, 0, 0, 0, 0, DateTimeKind.Local),
+                            Start = new DateTime(2025, 12, 10, 0, 0, 0, 0, DateTimeKind.Local),
                             Type = "Szabadság"
                         },
                         new
                         {
                             Id = 2,
-                            End = new DateTime(2025, 11, 17, 0, 0, 0, 0, DateTimeKind.Local),
-                            Start = new DateTime(2025, 11, 16, 0, 0, 0, 0, DateTimeKind.Local),
-                            Text = "HO",
+                            End = new DateTime(2025, 12, 2, 0, 0, 0, 0, DateTimeKind.Local),
+                            Start = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Local),
                             Type = "HomeOffice"
                         },
                         new
                         {
                             Id = 3,
-                            End = new DateTime(2025, 11, 19, 0, 0, 0, 0, DateTimeKind.Local),
-                            Start = new DateTime(2025, 11, 17, 0, 0, 0, 0, DateTimeKind.Local),
-                            Text = "AI tanfolyam",
+                            End = new DateTime(2025, 12, 4, 0, 0, 0, 0, DateTimeKind.Local),
+                            Start = new DateTime(2025, 12, 2, 0, 0, 0, 0, DateTimeKind.Local),
                             Type = "Képzés"
                         });
+                });
+
+            modelBuilder.Entity("ApplicationUserGroup", b =>
+                {
+                    b.HasOne("CalendarWebApp.Data.Group", null)
+                        .WithMany()
+                        .HasForeignKey("LogicalGroupsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CalendarWebApp.Data.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("LogicalMembersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CalendarWebApp.Data.ApplicationUser", b =>
+                {
+                    b.HasOne("CalendarWebApp.Data.Group", "HierarchicalGroup")
+                        .WithMany("HierarchicalMembers")
+                        .HasForeignKey("HierarchicalGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("HierarchicalGroup");
+                });
+
+            modelBuilder.Entity("CalendarWebApp.Data.Group", b =>
+                {
+                    b.HasOne("CalendarWebApp.Data.Organisation", "Organisation")
+                        .WithMany("Groups")
+                        .HasForeignKey("OrganisationId");
+
+                    b.Navigation("Organisation");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -333,6 +425,16 @@ namespace CalendarWebApp.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CalendarWebApp.Data.Group", b =>
+                {
+                    b.Navigation("HierarchicalMembers");
+                });
+
+            modelBuilder.Entity("CalendarWebApp.Data.Organisation", b =>
+                {
+                    b.Navigation("Groups");
                 });
 #pragma warning restore 612, 618
         }

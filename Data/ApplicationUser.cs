@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CalendarWebApp.Data
 {
@@ -7,22 +8,13 @@ namespace CalendarWebApp.Data
     {
         public string Name { get; set; }
         public DateOnly DateOfBirth { get; set; }
-        public string? Group { get; set; }
         public int BaseFreeDays => 20;
+        public int HierarchicalGroupId { get; set; }
 
-        public string? Organisation
-        {
-            get
-            {
-                if (Group == "Webfejlesztés" ||
-                    Group == "Informatika" ||
-                    Group == "Alaprendszer") return "Infrastruktúra és szolgáltatások";
-                if (Group == "Egyedi fejlesztések" ||
-                    Group == "Pénzügy") return "Forrás-termékfejlesztés";
-                if (Group == "Logisztika") return "Projektigazgatóság";
-                return null;
-            }
-        }
+        [ForeignKey("HierarchicalGroupId")]
+        public virtual Group HierarchicalGroup { get; set; }
+        public virtual ICollection<Group> LogicalGroups { get; set; } = new List<Group>();
+        public Organisation? Organisation => HierarchicalGroup?.Organisation;
 
         public int AgeBasedExtraFreeDays
         {

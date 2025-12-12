@@ -9,10 +9,14 @@
 @using CalendarWebApp.Repository.IRepository
 @using MyAppointment = RadzenBlazorDemos.Appointment
 @using CalendarWebApp.Data
+@using MyGroup = CalendarWebApp.Data.Group
 @attribute [Authorize]
 
 @inject IAppointmentRepository _appointmentRepository
 @inject UserManager<ApplicationUser> UserManager
+
+@inject IOrganisationRepository OrganisationRepository
+@inject ApplicationDbContext DbContext
 
 <div class="liquid-calendar-wrapper rz-p-4">
 
@@ -64,8 +68,16 @@
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn Property="@nameof(ApplicationUser.Name)" Title="Név" />
                 <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
-                <RadzenDataGridColumn Property="@nameof(ApplicationUser.Organisation)" Title="Szervezet" />
-                <RadzenDataGridColumn Property="@nameof(ApplicationUser.Group)" Title="Csoport" />
+                <RadzenDataGridColumn Title="Szervezet">
+                    <Template Context="user">
+                        @user.HierarchicalGroup?.Organisation?.Name
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Title="Csoport">
+                    <Template Context="user">
+                        @user.HierarchicalGroup?.Name
+                    </Template>
+                </RadzenDataGridColumn>
             </Columns>
         </RadzenDataGrid>
     </div>
@@ -152,36 +164,12 @@
     private IEnumerable<GroupItem> groupedData = new List<GroupItem>();
     private string search;
 
-    private readonly List<OrganizationDef> organizationDefinitions = new List<OrganizationDef>
-    {
-        new OrganizationDef
-        {
-            Name = "Infrastruktúra és szolgáltatások",
-            Groups = new List<string> { "Webfejlesztés", "Informatika", "Alaprendszer" }
-        },
-        new OrganizationDef
-        {
-            Name = "Forrás-termékfejlesztés",
-            Groups = new List<string> { "Egyedi fejlesztések", "Pénzügy" }
-        },
-        new OrganizationDef
-        {
-            Name = "Projektigazgatóság",
-            Groups = new List<string> { "Logisztika" }
-        }
-    };
 
     private class GroupItem
     {
         public string Organization { get; set; }
         public string GroupName { get; set; }
         public IEnumerable<string> Children { get; set; } = Enumerable.Empty<string>();
-    }
-
-    private class OrganizationDef
-    {
-        public string Name { get; set; }
-        public IEnumerable<string> Groups { get; set; }
     }
 
     private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
@@ -266,18 +254,50 @@
 
     private async Task Populate()
     {
-        var filteredDefs = organizationDefinitions.Select(org => new OrganizationDef
+        var allOrganisations = await OrganisationRepository.GetAllAsync();
+        if (!string.IsNullOrEmpty(search))
         {
-            Name = org.Name,
-            Groups = string.IsNullOrEmpty(search) ? org.Groups :
-                     org.Groups.Where(g => g.ToLower().Contains(search.ToLower()) || org.Name.ToLower().Contains(search.ToLower())).ToList()
-        }).Where(org => org.Groups.Any()).ToList();
+            allOrganisations = allOrganisations.Where(org =>
+                org.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                org.Groups.Any(g => g.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+            ).ToList();
+        }
 
-        groupedData = await Task.FromResult(filteredDefs
-            .SelectMany(org =>
-                new GroupItem[] { new GroupItem { Organization = org.Name, Children = org.Groups } }
-                .Concat(org.Groups.Select(g => new GroupItem { GroupName = g }))
-            ).ToList());
+        var flatList = new List<GroupItem>();
+
+        foreach (var org in allOrganisations)
+        {
+            var orgGroups = org.Groups.Select(g => g.Name).ToList();
+
+            if (orgGroups.Any())
+            {
+                flatList.Add(new GroupItem
+                {
+                    Organization = org.Name,
+                    Children = orgGroups
+                });
+
+                foreach (var groupName in orgGroups)
+                {
+                    if (!string.IsNullOrEmpty(search))
+                    {
+                        bool orgMatch = org.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+                        bool groupMatch = groupName.Contains(search, StringComparison.OrdinalIgnoreCase);
+
+                        if (orgMatch || groupMatch)
+                        {
+                            flatList.Add(new GroupItem { GroupName = groupName });
+                        }
+                    }
+                    else
+                    {
+                        flatList.Add(new GroupItem { GroupName = groupName });
+                    }
+                }
+            }
+        }
+
+        groupedData = flatList;
     }
 
     private bool? AreAllSelected()
@@ -324,10 +344,19 @@
         FilterEmployees();
     }
 
-    private void FilterEmployees()
+    private async Task FilterEmployees()
     {
-        if (values == null || !values.Any()) employees = UserManager.Users.ToList();
-        else employees = UserManager.Users.Where(u => values.Contains(u.Group)).ToList();
+        var query = DbContext.Users
+            .Include(u => u.HierarchicalGroup)
+            .ThenInclude(g => g.Organisation)
+            .AsQueryable();
+
+        if (values != null && values.Any())
+        {
+            query = query.Where(u => values.Contains(u.HierarchicalGroup.Name));
+        }
+
+        employees = await query.ToListAsync();
         selectedEmployees = null;
         StateHasChanged();
     }
