@@ -6,6 +6,7 @@
 @using Radzen
 @using System.Collections
 @using Microsoft.EntityFrameworkCore
+@using CalendarWebApp.Utility
 @using CalendarWebApp.Repository.IRepository
 @using MyAppointment = RadzenBlazorDemos.Appointment
 @using CalendarWebApp.Data
@@ -16,16 +17,19 @@
 @inject UserManager<ApplicationUser> UserManager
 
 @inject IOrganisationRepository OrganisationRepository
+@inject IGroupRepository GroupRepository
 @inject ApplicationDbContext DbContext
+
+@inject DialogService DialogService
 
 <div class="liquid-calendar-wrapper rz-p-4">
 
     <div class="glass-section rz-mb-4">
-        <RadzenText TextStyle="TextStyle.H5" class="section-title">Csoportok és Munkatársak</RadzenText>
-
+        <RadzenText TextStyle="TextStyle.H5" class="section-title">Szűrés csoportra</RadzenText>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-3">
-            <RadzenLabel Text="Szűrés csoportra:" Style="font-weight: 600; color: #233D4D;" />
-
+            <RadzenLabel Text="Hierarchikus" Style="font-weight: 600; color: #233D4D;" />
+            <RadzenSwitch @bind-Value=@isLogical Change="@(async (bool val) => { await Populate(); await FilterEmployees(); })" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Switch value" } })" />
+            <RadzenLabel Text="Logikai" Style="font-weight: 600; color: #233D4D;" />
             <RadzenDropDown @ref=dd @bind-Value=@values TValue="IEnumerable<string>" AllowClear="true"
                             Data=@groupedData Style="width: 100%; max-width: 400px;" ItemRender="ItemRender"
                             class="glass-dropdown">
@@ -45,7 +49,36 @@
                     @string.Join(", ", values ?? Enumerable.Empty<string>())
                 </ValueTemplate>
             </RadzenDropDown>
+            
+            
+            <AuthorizeView Roles="@SD.Role_Group_Leader">
+                @if (isLogical)
+                {
+                    <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddGroupDialog">
+                        <span class="bi bi-plus-square" aria-hidden="true"></span> LOGIKAI CSOPORT HOZZÁADÁSA
+                    </button>
+                }
+            </AuthorizeView>
         </RadzenStack>
+        <AuthorizeView Roles="@SD.Role_God">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-3">
+                @if (!isLogical)
+                {
+                    <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddOrganisationDialog">
+                        <span class="bi bi-plus-square" aria-hidden="true"></span> SZERVEZET HOZZÁADÁSA
+                    </button>
+                    <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddHierarchicalGroupDialog">
+                        <span class="bi bi-plus-square" aria-hidden="true"></span> HIERARCHIKUS CSOPORT HOZZÁADÁSA
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddGroupDialog">
+                        <span class="bi bi-plus-square" aria-hidden="true"></span> LOGIKAI CSOPORT HOZZÁADÁSA
+                    </button>
+                }
+            </RadzenStack>
+        </AuthorizeView>
 
         <RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true"
                         FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
@@ -68,16 +101,27 @@
                 </RadzenDataGridColumn>
                 <RadzenDataGridColumn Property="@nameof(ApplicationUser.Name)" Title="Név" />
                 <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
-                <RadzenDataGridColumn Title="Szervezet">
-                    <Template Context="user">
-                        @user.HierarchicalGroup?.Organisation?.Name
-                    </Template>
-                </RadzenDataGridColumn>
-                <RadzenDataGridColumn Title="Csoport">
-                    <Template Context="user">
-                        @user.HierarchicalGroup?.Name
-                    </Template>
-                </RadzenDataGridColumn>
+                @if (!isLogical)
+                {
+                    <RadzenDataGridColumn Title="Szervezet">
+                        <Template Context="user">
+                            @user.HierarchicalGroup?.Organisation?.Name
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn Title="Csoport">
+                        <Template Context="user">
+                            @user.HierarchicalGroup?.Name
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
+                else
+                {
+                    <RadzenDataGridColumn Title="Logikai csoportok">
+                        <Template Context="user">
+                            @string.Join(", ", user.LogicalGroups.Select(u => u.Name).ToList())
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
             </Columns>
         </RadzenDataGrid>
     </div>
@@ -164,6 +208,8 @@
     private IEnumerable<GroupItem> groupedData = new List<GroupItem>();
     private string search;
 
+    private bool isLogical = false;
+
 
     private class GroupItem
     {
@@ -173,6 +219,45 @@
     }
 
     private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
+
+    private async Task OpenAddOrganisationDialog()
+    {
+        var result = await DialogService.OpenAsync<AddOrganisationPage>("Szervezet hozzáadása",
+               new Dictionary<string, object>(),
+               new DialogOptions() { CssClass = "glass-dialog", Width = "500px" });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddHierarchicalGroupDialog()
+    {
+        var result = await DialogService.OpenAsync<AddHierarchicalPage>("Hierarchikus Csoport hozzáadása",
+               new Dictionary<string, object>(),
+               new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddGroupDialog()
+    {
+        var result = await DialogService.OpenAsync<AddLogicalPage>("Logikai Csoport hozzáadása",
+               new Dictionary<string, object>(),
+               new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -254,49 +339,76 @@
 
     private async Task Populate()
     {
-        var allOrganisations = await OrganisationRepository.GetAllAsync();
-        if (!string.IsNullOrEmpty(search))
-        {
-            allOrganisations = allOrganisations.Where(org =>
-                org.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                org.Groups.Any(g => g.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-            ).ToList();
-        }
-
+        values = null;
         var flatList = new List<GroupItem>();
 
-        foreach (var org in allOrganisations)
+        if (isLogical)
         {
-            var orgGroups = org.Groups.Select(g => g.Name).ToList();
+            var logicalGroups = await GroupRepository.GetAllLogicalAsync();
+            if (!string.IsNullOrEmpty(search))
+            {
+                logicalGroups = logicalGroups
+                    .Where(g => g.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
 
-            if (orgGroups.Any())
+            if (logicalGroups.Any())
             {
                 flatList.Add(new GroupItem
                 {
-                    Organization = org.Name,
-                    Children = orgGroups
+                    Organization = "Logikai Csoportok",
+                    Children = logicalGroups.Select(g => g.Name).ToList()
                 });
 
-                foreach (var groupName in orgGroups)
+                foreach (var group in logicalGroups)
                 {
-                    if (!string.IsNullOrEmpty(search))
-                    {
-                        bool orgMatch = org.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
-                        bool groupMatch = groupName.Contains(search, StringComparison.OrdinalIgnoreCase);
+                    flatList.Add(new GroupItem { GroupName = group.Name });
+                }
+            }
+        }
+        else
+        {
+            var allOrganisations = await OrganisationRepository.GetAllAsync();
+            if (!string.IsNullOrEmpty(search))
+            {
+                allOrganisations = allOrganisations.Where(org =>
+                    org.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    org.Groups.Any(g => g.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                ).ToList();
+            }
 
-                        if (orgMatch || groupMatch)
+            foreach (var org in allOrganisations)
+            {
+                var orgGroups = org.Groups.Select(g => g.Name).ToList();
+
+                if (orgGroups.Any())
+                {
+                    flatList.Add(new GroupItem
+                        {
+                            Organization = org.Name,
+                            Children = orgGroups
+                        });
+
+                    foreach (var groupName in orgGroups)
+                    {
+                        if (!string.IsNullOrEmpty(search))
+                        {
+                            bool orgMatch = org.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+                            bool groupMatch = groupName.Contains(search, StringComparison.OrdinalIgnoreCase);
+
+                            if (orgMatch || groupMatch)
+                            {
+                                flatList.Add(new GroupItem { GroupName = groupName });
+                            }
+                        }
+                        else
                         {
                             flatList.Add(new GroupItem { GroupName = groupName });
                         }
                     }
-                    else
-                    {
-                        flatList.Add(new GroupItem { GroupName = groupName });
-                    }
                 }
             }
         }
-
         groupedData = flatList;
     }
 
@@ -349,11 +461,19 @@
         var query = DbContext.Users
             .Include(u => u.HierarchicalGroup)
             .ThenInclude(g => g.Organisation)
+            .Include(u => u.LogicalGroups)
             .AsQueryable();
 
         if (values != null && values.Any())
         {
-            query = query.Where(u => values.Contains(u.HierarchicalGroup.Name));
+            if (isLogical)
+            {
+                query = query.Where(u => u.LogicalGroups.Any(lg => values.Contains(lg.Name)));
+            }
+            else
+            {
+                query = query.Where(u => values.Contains(u.HierarchicalGroup.Name));
+            }
         }
 
         employees = await query.ToListAsync();

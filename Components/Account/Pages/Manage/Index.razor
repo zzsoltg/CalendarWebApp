@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using CalendarWebApp.Data
+@using CalendarWebApp.Utility
 @using MyGroup = CalendarWebApp.Data.Group
 
 @inject UserManager<ApplicationUser> UserManager
@@ -33,7 +34,7 @@
                         <label for="dateOfBirth" class="form-label">Date Of Birth</label>
                     </div>
                     <div class="form-floating mb-3">
-                        <input type="text" value="@role" id="role" class="form-control" placeholder="Choose your role" disabled />
+                        <input type="text" value="@roleGet" id="role" class="form-control" placeholder="Choose your role" disabled />
                         <label for="role" class="form-label">Role</label>
                     </div>
                     <div class="form-floating mb-3">
@@ -75,6 +76,25 @@
     private string? organisation;
 
     private string? role;
+
+    private string roleGet
+    {
+        get
+        {
+            switch (role)
+            {
+                case SD.Role_God:
+                    return "God mode";
+                case SD.Role_Group_Leader:
+                    return "Csoportvezető";
+                case SD.Role_Employee:
+                    return "Alkalmazott";
+                default:
+                    return "Felhasználó";
+
+            }
+        }
+    }
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;

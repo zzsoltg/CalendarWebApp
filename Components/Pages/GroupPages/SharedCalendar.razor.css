@@ -32,6 +32,21 @@
             background-color: rgba(255, 255, 255, 0.6);
         }
 
+
+.liquid-calendar-wrapper ::deep .group-button {
+    background: rgba(35, 61, 77);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 900;
+    transition: all 0.3s ease;
+}
+
+    .liquid-calendar-wrapper ::deep .group-button:hover {
+        background-color: #1a2e3b;
+        color: white;
+    }
+
 .glass-search-input {
     width: 100%;
     border: none;

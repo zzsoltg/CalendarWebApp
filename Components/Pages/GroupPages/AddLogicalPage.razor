@@ -1,0 +1,95 @@
+﻿@using CalendarWebApp.Data
+@using MyGroup = CalendarWebApp.Data.Group
+@using CalendarWebApp.Repository.IRepository
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Radzen
+@using Radzen.Blazor
+
+@inject IGroupRepository GroupRepository
+@inject UserManager<ApplicationUser> UserManager
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenTemplateForm TItem="GroupDto" Data="@model" Submit=@OnSubmit>
+    <RadzenStack Gap="1rem">
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Csoportnév" Style="width: 6rem;" />
+            <RadzenTextBox Name="GroupName" @bind-Value="model.GroupName" Style="width: 12rem;" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Tagok" Style="width: 4rem;" />
+            <RadzenLabel Text=" " Style="width: 1rem;" />
+            <RadzenDropDown Name="Members"
+                            Data="@allUsers"
+                            @bind-Value="model.SelectedUserIds"
+                            TextProperty="Name"
+                            ValueProperty="Id"
+                            Multiple="true"
+                            AllowClear="true"
+                            AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            Placeholder="Nincs tag kiválasztva"
+                            Style="width: 18rem; height: 300px;"
+                            Chips="true"
+                            MaxSelectedLabels="10000" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Mentés" IsBusy="@isSaving" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    private GroupDto model = new();
+    private List<ApplicationUser> allUsers = new();
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        allUsers = await UserManager.Users.OrderBy(u => u.Name).ToListAsync();
+    }
+
+    private async Task OnSubmit()
+    {
+        isSaving = true;
+        try
+        {
+            var newGroup = new MyGroup
+            {
+                Name = model.GroupName,
+                OrganisationId = null
+            };
+
+            await GroupRepository.CreateAsync(newGroup);
+
+            if (model.SelectedUserIds != null && model.SelectedUserIds.Any())
+            {
+                foreach (var userId in model.SelectedUserIds)
+                {
+                    await GroupRepository.AddUserToLogicalGroupAsync(userId, newGroup.Id);
+                }
+            }
+
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Siker", Detail = "A logikai csoport létrejött." });
+            DialogService.Close(true);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Hiba", Detail = "Nem sikerült létrehozni a csoportot." });
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public class GroupDto
+    {
+        public string GroupName { get; set; } = "";
+        public IEnumerable<string> SelectedUserIds { get; set; } = new List<string>();
+    }
+}

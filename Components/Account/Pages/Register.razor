@@ -8,6 +8,7 @@
 @using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.AspNetCore.Components.Authorization
 @using CalendarWebApp.Data
+@using CalendarWebApp.Utility
 @using CalendarWebApp.Repository.IRepository
 
 @using MyGroup = CalendarWebApp.Data.Group
@@ -64,9 +65,9 @@
                                 </div>
                                 <div class="form-floating mb-3">
                                     <InputSelect @bind-Value="Input.Role" class="form-select">
-                                        <option value="alkalmazott" selected>Alkalmazott</option>
-                                        <option value="csoportvezeto">Csoportvezető</option>
-                                        <option value="god">God Mode</option>
+                                        <option value="@SD.Role_Employee" selected>Alkalmazott</option>
+                                        <option value="@SD.Role_Group_Leader">Csoportvezető</option>
+                                        <option value="@SD.Role_God">God Mode</option>
                                     </InputSelect>
                                     <label for="role">Role</label>
                                 </div>
@@ -194,11 +195,11 @@
         Logger.LogInformation("User created a new account with password.");
         
         
-        if (!await RoleManager.RoleExistsAsync("alkalmazott"))
+        if (!await RoleManager.RoleExistsAsync(SD.Role_Employee))
         {
-            await RoleManager.CreateAsync(new IdentityRole("alkalmazott"));
-            await RoleManager.CreateAsync(new IdentityRole("csoportvezeto"));
-            await RoleManager.CreateAsync(new IdentityRole("god"));
+            await RoleManager.CreateAsync(new IdentityRole(SD.Role_Employee));
+            await RoleManager.CreateAsync(new IdentityRole(SD.Role_Group_Leader));
+            await RoleManager.CreateAsync(new IdentityRole(SD.Role_God));
         }
         
 
@@ -208,7 +209,7 @@
         }
         else
         {
-            await UserManager.AddToRoleAsync(user, "alkalmazott");
+            await UserManager.AddToRoleAsync(user, SD.Role_Employee);
         }
         
 
@@ -281,7 +282,7 @@
         [Required]
         [DataType(DataType.Text)]
         [Display(Name = "Role")]
-        public string Role { get; set; } = "alkalmazott";
+        public string Role { get; set; } = SD.Role_Employee;
 
         [Required]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]

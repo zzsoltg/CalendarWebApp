@@ -1,0 +1,117 @@
+﻿@using CalendarWebApp.Data
+@using MyGroup = CalendarWebApp.Data.Group
+@using CalendarWebApp.Repository.IRepository
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Radzen
+@using Radzen.Blazor
+
+@inject IGroupRepository GroupRepository
+@inject IOrganisationRepository OrganisationRepository
+@inject UserManager<ApplicationUser> UserManager
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject ApplicationDbContext DbContext
+
+<RadzenTemplateForm TItem="HierarchicalGroupDto" Data="@model" Submit=@OnSubmit>
+    <RadzenStack Gap="1rem">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Szervezet" Style="width: 8rem;" />
+            <RadzenDropDown Name="Organisation" 
+                            Data="@organisations" 
+                            @bind-Value="model.OrganisationId" 
+                            TextProperty="Name" 
+                            ValueProperty="Id" 
+                            Placeholder="(szervezet)"
+                            Style="width: 18rem;" />
+            <RadzenRequiredValidator Component="Organisation" Text="A szervezet kiválasztása kötelező!" Popup="true" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Csoportnév" Style="width: 8rem;" />
+            <RadzenTextBox Name="GroupName" @bind-Value="model.GroupName" Style="width: 18rem;" />
+            <RadzenRequiredValidator Component="GroupName" Text="A csoport neve kötelező!" Popup="true" />
+        </RadzenStack>
+
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Tagok" Style="width: 8rem;" />
+            
+            <RadzenDropDown Name="Members"
+                            Data="@allUsers"
+                            @bind-Value="model.SelectedUserIds"
+                            TextProperty="Name"
+                            ValueProperty="Id"
+                            Multiple="true"
+                            AllowClear="true"
+                            AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            Placeholder="Nincs tag kiválasztva"
+                            Style="width: 18rem; height: 300px;"
+                            Chips="true"
+                            MaxSelectedLabels="1000" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Class="rz-mt-2">
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Mentés" IsBusy="@isSaving" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    private HierarchicalGroupDto model = new();
+    private List<Organisation> organisations = new();
+    private List<ApplicationUser> allUsers = new();
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        organisations = await OrganisationRepository.GetAllAsync();
+        allUsers = await UserManager.Users.OrderBy(u => u.Name).ToListAsync();
+    }
+
+    private async Task OnSubmit()
+    {
+        isSaving = true;
+        try
+        {
+            var newGroup = new MyGroup
+            {
+                Name = model.GroupName,
+                OrganisationId = model.OrganisationId
+            };
+
+            await GroupRepository.CreateAsync(newGroup);
+
+            if (model.SelectedUserIds != null && model.SelectedUserIds.Any())
+            {
+                foreach (var userId in model.SelectedUserIds)
+                {
+                    await DbContext.Database.ExecuteSqlRawAsync(
+                        "UPDATE AspNetUsers SET HierarchicalGroupId = {0} WHERE Id = {1}",
+                        newGroup.Id,
+                        userId
+                    );
+                }
+            }
+
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Siker", Detail = "A hierarchikus csoport létrejött és a tagok frissítve." });
+            DialogService.Close(true);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Hiba", Detail = $"Hiba történt: {ex.Message}" });
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public class HierarchicalGroupDto
+    {
+        public int OrganisationId { get; set; }
+        public string GroupName { get; set; } = "";
+        public IEnumerable<string> SelectedUserIds { get; set; } = new List<string>();
+    }
+}
