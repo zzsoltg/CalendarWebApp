@@ -67,6 +67,7 @@ namespace CalendarWebApp.Repository
             return await _context.Groups
                 .Where(g => g.OrganisationId != null)
                 .Include(g => g.Organisation)
+                .Include(g => g.GroupLeader)
                 .OrderBy(g => g.Name)
                 .ToListAsync();
         }
@@ -75,6 +76,7 @@ namespace CalendarWebApp.Repository
         {
             return await _context.Groups
                 .Where(g => g.OrganisationId == null)
+                .Include(g => g.GroupLeader)
                 .OrderBy(g => g.Name)
                 .ToListAsync();
         }

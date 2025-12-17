@@ -1,0 +1,284 @@
+﻿@using CalendarWebApp.Data
+@using MyGroup = CalendarWebApp.Data.Group
+@using CalendarWebApp.Repository.IRepository
+@using CalendarWebApp.Utility
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Radzen
+@using Radzen.Blazor
+@using System.Collections.ObjectModel
+
+@inject IGroupRepository GroupRepository
+@inject IOrganisationRepository OrganisationRepository
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<style>
+    .glass-grid {
+        background-color: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+    }
+
+    .action-icon {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+        .action-icon:hover {
+            transform: scale(1.2);
+        }
+</style>
+
+<div class="rz-p-4" style="min-width: 800px;">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Class="rz-mb-4">
+        <RadzenLabel Text="Szerkesztendő logikai csoport:" Style="font-weight: bold; width: 150px;" />
+        <RadzenDropDown @bind-Value="selectedGroupId"
+                        Data="@logicalGroups"
+                        Change="@OnGroupChanged"
+                        ValueProperty="Id"
+                        TextProperty="Name"
+                        AllowFiltering="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        Placeholder="Válassz csoportot..."
+                        Style="width: 300px;" />
+
+        <RadzenButton Text="Csoport Törlése" ButtonStyle="ButtonStyle.Danger"
+                      Disabled="@(selectedGroupId == 0)"
+                      Click="@DeleteGroup"
+                      Icon="delete" Size="ButtonSize.Small" />
+    </RadzenStack>
+
+    @if (selectedGroupId != 0)
+    {
+        <RadzenStack Gap="1rem">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenLabel Text="Csoportvezető:" Style="font-weight: bold; width: 150px;" />
+                <RadzenDropDown @bind-Value="selectedLeaderId"
+                                Data="@availableLeaders"
+                                Change="@OnLeaderChanged"
+                                ValueProperty="Id"
+                                TextProperty="Name"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Placeholder="Válassz vezetőt..."
+                                Style="width: 300px;">
+                    <Template>
+                        @((context as ApplicationUser).Name)
+                    </Template>
+                </RadzenDropDown>
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenLabel Text="Új tag hozzáadása:" Style="font-weight: bold; width: 150px;" />
+
+                <RadzenDropDown @bind-Value="memberToAddId"
+                                Data="@UsersAvailableToAdd"
+                                TextProperty="Name"
+                                ValueProperty="Id"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Placeholder="Válassz felhasználót..."
+                                Style="width: 300px;" />
+
+                <RadzenButton Text="Hozzáadás"
+                              ButtonStyle="ButtonStyle.Info"
+                              Icon="add"
+                              Click="@AddMember"
+                              Disabled="@(string.IsNullOrEmpty(memberToAddId))"
+                              Size="ButtonSize.Small" />
+            </RadzenStack>
+
+            <RadzenLabel Text="Csoport tagjai:" Style="font-weight: bold; margin-top: 10px;" />
+
+            <RadzenDataGrid Data="@groupMembers" TItem="ApplicationUser"
+                            AllowFiltering="true" AllowSorting="true" PageSize="10" AllowPaging="true"
+                            Class="glass-grid">
+                <Columns>
+                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Name" Title="Név" />
+
+                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Email" Title="Email" />
+
+                    <RadzenDataGridColumn TItem="ApplicationUser" Title="Törlés" Sortable="false" Filterable="false" Width="80px" TextAlign="TextAlign.Center">
+                        <Template Context="user">
+                            <RadzenButton Icon="delete"
+                                          ButtonStyle="ButtonStyle.Danger"
+                                          Size="ButtonSize.ExtraSmall"
+                                          Click="@(() => RemoveMember(user))"
+                                          Disabled="@(user.Id == selectedLeaderId)"
+                                          Class="action-icon" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="1rem" Class="rz-mt-4">
+            <RadzenButton Text="Bezárás" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" />
+            <RadzenButton Text="Mentés" ButtonStyle="ButtonStyle.Success" Icon="save" Click="@SaveChanges" Disabled="@(!hasChanges)" />
+        </RadzenStack>
+    }
+</div>
+
+@code {
+    private int selectedGroupId;
+    private string selectedLeaderId;
+    private string memberToAddId;
+    private List<ApplicationUser> allUsers = new();
+
+    private List<MyGroup> logicalGroups = new();
+    private List<ApplicationUser> availableLeaders = new();
+
+    private ObservableCollection<ApplicationUser> groupMembers = new();
+
+    private bool hasChanges = false;
+
+    private IEnumerable<ApplicationUser> UsersAvailableToAdd =>
+        allUsers.Where(u => !groupMembers.Any(m => m.Id == u.Id));
+
+    protected override async Task OnInitializedAsync()
+    {
+        logicalGroups = await GroupRepository.GetAllLogicalAsync();
+
+        allUsers = await UserManager.Users.OrderBy(u => u.Name).ToListAsync();
+
+        var leaders = await UserManager.GetUsersInRoleAsync(SD.Role_Group_Leader);
+        var gods = await UserManager.GetUsersInRoleAsync(SD.Role_God);
+
+        availableLeaders = leaders
+            .Concat(gods)
+            .DistinctBy(u => u.Id)
+            .OrderBy(u => u.Name)
+            .ToList();
+    }
+
+    private async Task OnGroupChanged(object value)
+    {
+        if (value == null) return;
+        selectedGroupId = (int)value;
+
+        var group = await GroupRepository.GetByIdAsync(selectedGroupId);
+        selectedLeaderId = group.GroupLeaderId;
+
+        var members = await DbContext.Users
+            .Where(u => u.LogicalGroups.Any(g => g.Id == selectedGroupId))
+            .ToListAsync();
+
+        groupMembers = new ObservableCollection<ApplicationUser>(members);
+        memberToAddId = null;
+        hasChanges = false;
+    }
+
+    private void OnLeaderChanged(object value)
+    {
+        var newLeaderId = (string)value;
+        if (string.IsNullOrEmpty(newLeaderId)) return;
+
+        selectedLeaderId = newLeaderId;
+
+        var leaderUser = groupMembers.FirstOrDefault(u => u.Id == newLeaderId);
+
+        if (leaderUser == null)
+        {
+            var userToAdd = availableLeaders.FirstOrDefault(u => u.Id == newLeaderId);
+            if (userToAdd != null)
+            {
+                groupMembers.Add(userToAdd);
+            }
+        }
+        hasChanges = true;
+    }
+
+    private void AddMember()
+    {
+        if (string.IsNullOrEmpty(memberToAddId)) return;
+
+        var userToAdd = allUsers.FirstOrDefault(u => u.Id == memberToAddId);
+
+        if (userToAdd != null)
+        {
+            groupMembers.Add(userToAdd);
+            memberToAddId = null;
+
+            hasChanges = true;
+        }
+    }
+
+    private void RemoveMember(ApplicationUser user)
+    {
+        if (user.Id == selectedLeaderId) return;
+
+        groupMembers.Remove(user);
+        hasChanges = true;
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            var group = await GroupRepository.GetByIdAsync(selectedGroupId);
+            if (group != null)
+            {
+                group.GroupLeaderId = selectedLeaderId;
+                await GroupRepository.UpdateAsync(group);
+            }
+
+            var currentDbMembers = await DbContext.Users
+                .Where(u => u.LogicalGroups.Any(g => g.Id == selectedGroupId))
+                .ToListAsync();
+
+            var currentDbIds = currentDbMembers.Select(u => u.Id).ToList();
+            var newUiIds = groupMembers.Select(u => u.Id).ToList();
+
+            var toAdd = newUiIds.Except(currentDbIds).ToList();
+            var toRemove = currentDbIds.Except(newUiIds).ToList();
+
+            foreach (var userId in toAdd)
+            {
+                await GroupRepository.AddUserToLogicalGroupAsync(userId, selectedGroupId);
+            }
+
+            foreach (var userId in toRemove)
+            {
+                await GroupRepository.RemoveUserFromLogicalGroupAsync(userId, selectedGroupId);
+            }
+
+            hasChanges = false;
+            memberToAddId = null;
+            DialogService.Alert("A változtatások mentése sikeresen megtörtént", "Sikeres mentés", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
+        }
+        catch (Exception ex)
+        {
+            DialogService.Alert($"Hiba történt a mentés során: {ex.Message}", "Hiba", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
+        }
+    }
+
+    private async Task DeleteGroup()
+    {
+        var confirm = await DialogService.Confirm("Biztosan törölni szeretnéd ezt a csoportot?", "Csoport törlése",
+            new ConfirmOptions() { OkButtonText = "Igen", CancelButtonText = "Nem", CssClass = "glass-dialog" });
+
+        if (confirm == true)
+        {
+            try
+            {
+                await GroupRepository.DeleteAsync(selectedGroupId);
+
+                DialogService.Alert("A csoport törölve", "Sikeres törlés", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
+
+                selectedGroupId = 0;
+                groupMembers.Clear();
+                selectedLeaderId = null;
+                memberToAddId = null;
+                logicalGroups = await GroupRepository.GetAllLogicalAsync();
+            }
+            catch (Exception ex)
+            {
+                DialogService.Alert($"Nem sikerült törölni: {ex.Message}", "Hiba", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
+            }
+        }
+    }
+}

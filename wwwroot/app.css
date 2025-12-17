@@ -96,6 +96,8 @@ span.nav-link {
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     background-color: transparent;
+    z-index: 10000;
+    max-width: none;
 }
 
     .glass-dialog .rz-dialog-titlebar {
@@ -135,6 +137,7 @@ span.nav-link {
 
     .glass-dialog .rz-dropdown,
     .glass-dialog .rz-inputtext,
+    .glass-dialog .rz-textbox,
     .glass-dialog .rz-spinner {
         background-color: rgba(255, 255, 255, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.6);
@@ -179,3 +182,70 @@ span.nav-link {
             background-color: rgba(220, 53, 69, 0.8);
             backdrop-filter: blur(2px);
         }
+
+.glass-grid {
+    --rz-grid-background-color: transparent;
+    --rz-grid-content-background-color: transparent;
+    --rz-grid-header-background-color: rgba(255, 255, 255, 0.50);
+    --rz-grid-header-color: #233D4D;
+    --rz-grid-header-font-weight: 800;
+    --rz-grid-header-text-transform: uppercase;
+    --rz-grid-cell-color: #233D4D;
+    --rz-grid-cell-background-color: rgba(255, 255, 255, 0.40);
+    --rz-grid-stripe-background-color: rgba(255, 255, 255, 0.15);
+    --rz-grid-hover-background-color: rgba(255, 255, 255, 0.6);
+    --rz-grid-hover-color: #000;
+    --rz-grid-pager-color: rgba(255, 255, 255, 0.50);
+    background-color: transparent;
+    border: 1px solid white;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+    .glass-grid.rz-datagrid {
+        background-color: transparent;
+    }
+
+    .glass-grid .rz-datagrid-header {
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+       .glass-grid .rz-datagrid-header th {
+            background-color: var(--rz-grid-header-background-color);
+            border: none !important;
+        }
+
+    .glass-grid .rz-datagrid-data td,
+    .glass-grid .rz-grid-table td {
+        background-color: var(--rz-grid-cell-background-color);
+    }
+
+    .glass-grid .rz-datagrid-row:hover {
+        background-color: rgba(255, 255, 255, 0.4);
+    }
+
+ .glass-grid .rz-chkbox-box {
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 1px solid #233D4D;
+}
+
+    .glass-grid .rz-chkbox-box.rz-state-active {
+        background-color: #233D4D;
+    }
+
+.glass-grid .rz-pager {
+    background-color: var(--rz-grid-pager-color);
+}
+
+.drag-grid {
+    height: 400px;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.panel-header {
+    background-color: rgba(0,0,0,0.05);
+    padding: 10px;
+    border-radius: 5px 5px 0 0;
+}

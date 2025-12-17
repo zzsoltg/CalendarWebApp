@@ -1,4 +1,5 @@
 ﻿@using CalendarWebApp.Data
+@using CalendarWebApp.Utility
 @using MyGroup = CalendarWebApp.Data.Group
 @using CalendarWebApp.Repository.IRepository
 @using Microsoft.EntityFrameworkCore
@@ -17,12 +18,12 @@
     <RadzenStack Gap="1rem">
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
             <RadzenLabel Text="Szervezet" Style="width: 8rem;" />
-            <RadzenDropDown Name="Organisation" 
-                            Data="@organisations" 
-                            @bind-Value="model.OrganisationId" 
-                            TextProperty="Name" 
-                            ValueProperty="Id" 
-                            Placeholder="(szervezet)"
+            <RadzenDropDown Name="Organisation"
+                            Data="@organisations"
+                            @bind-Value="model.OrganisationId"
+                            TextProperty="Name"
+                            ValueProperty="Id"
+                            Placeholder="(nincs)"
                             Style="width: 18rem;" />
             <RadzenRequiredValidator Component="Organisation" Text="A szervezet kiválasztása kötelező!" Popup="true" />
         </RadzenStack>
@@ -33,13 +34,29 @@
             <RadzenRequiredValidator Component="GroupName" Text="A csoport neve kötelező!" Popup="true" />
         </RadzenStack>
 
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Csoportvezető" Style="width: 8rem;" />
+            <RadzenDropDown Name="GroupLeader"
+                            Data="@groupLeaders"
+                            @bind-Value="model.GroupLeaderId"
+                            Change="@OnLeaderChanged"
+                            TextProperty="Name"
+                            ValueProperty="Id"
+                            AllowClear="true"
+                            AllowFiltering="true"
+                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            Placeholder="(nincs)"
+                            Style="width: 18rem;" />
+            <RadzenRequiredValidator Component="GroupLeader" Text="Csoportvezető választása kötelező!" Popup="true" Style="position: absolute" />
+        </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
             <RadzenLabel Text="Tagok" Style="width: 8rem;" />
-            
+
             <RadzenDropDown Name="Members"
                             Data="@allUsers"
                             @bind-Value="model.SelectedUserIds"
+                            Change="@OnMembersChanged"
                             TextProperty="Name"
                             ValueProperty="Id"
                             Multiple="true"
@@ -62,13 +79,65 @@
     private HierarchicalGroupDto model = new();
     private List<Organisation> organisations = new();
     private List<ApplicationUser> allUsers = new();
+    private List<ApplicationUser> groupLeaders = new();
     private bool isSaving = false;
 
     protected override async Task OnInitializedAsync()
     {
         organisations = await OrganisationRepository.GetAllAsync();
         allUsers = await UserManager.Users.OrderBy(u => u.Name).ToListAsync();
+        var allGroups = await GroupRepository.GetAllHierarchicalAsync();
+        var busyLeaderIds = allGroups
+            .Where(g => g.GroupLeaderId != null)
+            .Select(g => g.GroupLeaderId)
+            .ToHashSet();
+        var leaders = await UserManager.GetUsersInRoleAsync(SD.Role_Group_Leader);
+        var gods = await UserManager.GetUsersInRoleAsync(SD.Role_God);
+        groupLeaders = leaders
+            .Concat(gods)
+            .DistinctBy(u => u.Id)
+            .Where(u => !busyLeaderIds.Contains(u.Id))
+            .OrderBy(u => u.Name)
+            .ToList();
     }
+
+    private void OnLeaderChanged(object value)
+    {
+        var newLeaderId = (string)value;
+
+        if (string.IsNullOrEmpty(newLeaderId)) return;
+
+        var currentMembers = (model.SelectedUserIds ?? new List<string>()).ToList();
+
+        if (!currentMembers.Contains(newLeaderId))
+        {
+            currentMembers.Add(newLeaderId);
+            model.SelectedUserIds = currentMembers;
+        }
+    }
+
+    private async Task OnMembersChanged(object value)
+    {
+        if (string.IsNullOrEmpty(model.GroupLeaderId)) return;
+
+        var selectedMembers = (IEnumerable<string>)value;
+
+        if (selectedMembers == null || !selectedMembers.Contains(model.GroupLeaderId))
+        {
+            await DialogService.Alert("A csoportvezető automatikusan tagja a csoportnak, ezért nem távolítható el a listából.", "Figyelmeztetés",
+                new AlertOptions()
+                {
+                    OkButtonText = "Rendben",
+                    CssClass = "glass-dialog",
+                    Width = "400px"
+                });
+
+            var fixedList = (selectedMembers ?? Enumerable.Empty<string>()).ToList();
+            fixedList.Add(model.GroupLeaderId);
+            model.SelectedUserIds = fixedList;
+        }
+    }
+
 
     private async Task OnSubmit()
     {
@@ -78,7 +147,8 @@
             var newGroup = new MyGroup
             {
                 Name = model.GroupName,
-                OrganisationId = model.OrganisationId
+                OrganisationId = model.OrganisationId,
+                GroupLeaderId = model.GroupLeaderId
             };
 
             await GroupRepository.CreateAsync(newGroup);
@@ -94,13 +164,12 @@
                     );
                 }
             }
-
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Siker", Detail = "A hierarchikus csoport létrejött és a tagok frissítve." });
             DialogService.Close(true);
+            DialogService.Alert("A hierarchikus csoport sikeresen létrejött.", "Sikeres mentés", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Hiba", Detail = $"Hiba történt: {ex.Message}" });
+            DialogService.Alert($"Hiba történt a művelet során: {ex.Message}", "Hiba", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
         }
         finally
         {
@@ -112,6 +181,7 @@
     {
         public int OrganisationId { get; set; }
         public string GroupName { get; set; } = "";
+        public string? GroupLeaderId { get; set; }
         public IEnumerable<string> SelectedUserIds { get; set; } = new List<string>();
     }
 }

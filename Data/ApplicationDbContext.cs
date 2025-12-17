@@ -33,6 +33,12 @@ namespace CalendarWebApp.Data
                 .WithMany(g => g.LogicalMembers)
                 .UsingEntity(j => j.ToTable("UserLogicalGroups"));
 
+            builder.Entity<Group>()
+            .HasOne(g => g.GroupLeader)
+            .WithMany()
+            .HasForeignKey(g => g.GroupLeaderId)
+            .OnDelete(DeleteBehavior.SetNull);
+
             builder.Entity<ApplicationUser>()
                         .Property(u => u.DateOfBirth)
                         .HasColumnType("date");

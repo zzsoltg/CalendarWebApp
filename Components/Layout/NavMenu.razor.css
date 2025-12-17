@@ -13,7 +13,7 @@
     min-height: 7rem;
     height: auto;
     position: relative;
-    z-index: 10000;
+    z-index: 1000;
 }
 
     .glass-nav ::deep .nav-link {

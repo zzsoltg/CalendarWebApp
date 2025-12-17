@@ -40,6 +40,7 @@ namespace CalendarWebApp.Repository
         {
             return await _context.Organisations
                 .Include(o => o.Groups)
+                .ThenInclude(g => g.GroupLeader)
                 .OrderBy(o => o.Name)
                 .ToListAsync();
         }

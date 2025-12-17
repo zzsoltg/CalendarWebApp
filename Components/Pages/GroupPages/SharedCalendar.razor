@@ -26,13 +26,20 @@
 
     <div class="glass-section rz-mb-4">
         <RadzenText TextStyle="TextStyle.H5" class="section-title">Szűrés csoportra</RadzenText>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-3">
-            <RadzenLabel Text="Hierarchikus" Style="font-weight: 600; color: #233D4D;" />
-            <RadzenSwitch @bind-Value=@isLogical Change="@(async (bool val) => { await Populate(); await FilterEmployees(); })" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Switch value" } })" />
-            <RadzenLabel Text="Logikai" Style="font-weight: 600; color: #233D4D;" />
-            <RadzenDropDown @ref=dd @bind-Value=@values TValue="IEnumerable<string>" AllowClear="true"
-                            Data=@groupedData Style="width: 100%; max-width: 400px;" ItemRender="ItemRender"
-                            class="glass-dropdown">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-3" Wrap="FlexWrap.Wrap">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenLabel Text="Hierarchikus" Style="font-weight: 600; color: #233D4D;" />
+                <RadzenSwitch @bind-Value=@isLogical Change="@(async (bool val) => { await Populate(); await FilterEmployees(); })" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Switch value" } })" />
+                <RadzenLabel Text="Logikai" Style="font-weight: 600; color: #233D4D;" />
+            </RadzenStack>
+            <RadzenDropDown @ref=dd
+                            @bind-Value=@values
+                            TValue="IEnumerable<string>"
+                            AllowClear="true"
+                            Data=@groupedData
+                            ItemRender="ItemRender"
+                            Style="flex-grow: 1; min-width: 250px;"
+                            class="glass-dropdown responsive-dropdown">
                 <HeaderTemplate>
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-2">
                         <RadzenCheckBox TValue="bool?" TriState=false Value="@AreAllSelected()" Change="@SelectAll" title="@(dd.SelectAllText)" Disabled=@(!groupedData.Any()) />
@@ -40,49 +47,66 @@
                     </RadzenStack>
                 </HeaderTemplate>
                 <Template>
-                    <RadzenCheckBox TValue="bool?" TriState=false Value="@IsGroupSelected(context)" Change="@(args => SelectGroup(args, (GroupItem)context))" />
-                    <RadzenLabel Style=@($"margin-inline-start: 0.5rem; color: #233D4D; cursor: pointer; font-weight: {(context.Organization != null ? "800" : "500")}")
-                                 Text="@(context.Organization ?? context.GroupName)"
-                                 onclick="event.target.previousElementSibling.querySelector('.rz-chkbox-box').click()" />
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenCheckBox TValue="bool?" TriState=false Value="@IsGroupSelected(context)" Change="@(args => SelectGroup(args, (GroupItem)context))" />
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" Style="margin-inline-start: 0.5rem; cursor: pointer;" onclick="event.target.closest('.rz-dropdown-item').querySelector('.rz-chkbox-box').click()">
+                            <RadzenText Text="@(context.Organization ?? context.GroupName)"
+                                        Style=@($"color: #233D4D; font-weight: {(context.Organization != null ? "800" : "500")}; margin: 0;") />
+
+                            @if (!string.IsNullOrEmpty(context.LeaderName))
+                            {
+                                <RadzenText Text="@($"Csoportvezető: {context.LeaderName}")"
+                                            Style="font-size: 0.75rem; color: #6c757d; margin: 0;" />
+                            }
+                        </RadzenStack>
+                    </RadzenStack>
                 </Template>
                 <ValueTemplate>
                     @string.Join(", ", values ?? Enumerable.Empty<string>())
                 </ValueTemplate>
             </RadzenDropDown>
-            
-            
-            <AuthorizeView Roles="@SD.Role_Group_Leader">
-                @if (isLogical)
-                {
-                    <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddGroupDialog">
-                        <span class="bi bi-plus-square" aria-hidden="true"></span> LOGIKAI CSOPORT HOZZÁADÁSA
-                    </button>
-                }
-            </AuthorizeView>
-        </RadzenStack>
-        <AuthorizeView Roles="@SD.Role_God">
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-3">
-                @if (!isLogical)
-                {
-                    <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddOrganisationDialog">
-                        <span class="bi bi-plus-square" aria-hidden="true"></span> SZERVEZET HOZZÁADÁSA
-                    </button>
-                    <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddHierarchicalGroupDialog">
-                        <span class="bi bi-plus-square" aria-hidden="true"></span> HIERARCHIKUS CSOPORT HOZZÁADÁSA
-                    </button>
-                }
-                else
-                {
-                    <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddGroupDialog">
-                        <span class="bi bi-plus-square" aria-hidden="true"></span> LOGIKAI CSOPORT HOZZÁADÁSA
-                    </button>
-                }
-            </RadzenStack>
-        </AuthorizeView>
 
+            <div class="button-group">
+                <AuthorizeView Roles="@SD.Role_Group_Leader">
+                    @if (isLogical)
+                    {
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddGroupDialog">
+                            <span class="bi bi-plus-square" aria-hidden="true"></span>
+                        </button>
+                        <button type="submit" class="btn btn-sm btn-warning group-button" @onclick="OpenEditLogicalGroupDialog">
+                            <span class="bi bi-pencil-square" aria-hidden="true"></span> <span class="btn-text">SZERKESZTÉS</span>
+                        </button>
+                    }
+                </AuthorizeView>
+                <AuthorizeView Roles="@SD.Role_God">
+                    @if (isLogical)
+                    {
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddGroupDialog">
+                            <span class="bi bi-plus-square" aria-hidden="true"></span> <span class="btn-text">HOZZÁADÁS</span>
+                        </button>
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenEditLogicalGroupDialog">
+                            <span class="bi bi-pencil-square" aria-hidden="true"></span> <span class="btn-text">SZERKESZTÉS</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddOrganisationDialog">
+                            <span class="bi bi-plus-square" aria-hidden="true"></span> SZERVEZET HOZZÁADÁSA
+                        </button>
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddHierarchicalGroupDialog">
+                            <span class="bi bi-plus-square" aria-hidden="true"></span> CSOPORT HOZZÁADÁSA
+                        </button>
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenEditHierarchicalGroupDialog">
+                            <span class="bi bi-pencil-square" aria-hidden="true"></span> <span class="btn-text">SZERKESZTÉS</span>
+                        </button>
+                    }
+                </AuthorizeView>
+            </div>
+        </RadzenStack>
+            
         <RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true"
                         FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                        AllowPaging="true" PageSize="5" AllowSorting="true" Data="@employees"
+                        AllowPaging="true" PageSize="4" AllowSorting="true" Data="@employees"
                         SelectionMode="DataGridSelectionMode.Multiple"
                         Value="@selectedEmployees"
                         ValueChanged="@(async (IList<ApplicationUser> args) => { selectedEmployees = args; await LoadAppointments(); })"
@@ -111,6 +135,7 @@
                     <RadzenDataGridColumn Title="Csoport">
                         <Template Context="user">
                             @user.HierarchicalGroup?.Name
+                            <RadzenText Style="font-size: 0.75rem; color: #6c757d; margin: 0;">Csoportvezető: @user.HierarchicalGroup?.GroupLeader.Name</RadzenText>
                         </Template>
                     </RadzenDataGridColumn>
                 }
@@ -215,6 +240,7 @@
     {
         public string Organization { get; set; }
         public string GroupName { get; set; }
+        public string LeaderName { get; set; }
         public IEnumerable<string> Children { get; set; } = Enumerable.Empty<string>();
     }
 
@@ -238,6 +264,48 @@
         var result = await DialogService.OpenAsync<AddHierarchicalPage>("Hierarchikus Csoport hozzáadása",
                new Dictionary<string, object>(),
                new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenEditHierarchicalGroupDialog()
+    {
+        var result = await DialogService.OpenAsync<EditHierarchicalPage>("Hierarchikus Csoport szerkesztése",
+               new Dictionary<string, object>(),
+               new DialogOptions()
+               {
+                   CssClass = "glass-dialog",
+                   Width = "1500px",
+                   Height = "auto",
+                   Resizable = true,
+                   Draggable = true,
+                   CloseDialogOnOverlayClick = true
+               });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenEditLogicalGroupDialog()
+    {
+        var result = await DialogService.OpenAsync<EditLogicalPage>("Logikai Csoport szerkesztése",
+               new Dictionary<string, object>(),
+               new DialogOptions()
+               {
+                   CssClass = "glass-dialog",
+                   Width = "1500px",
+                   Height = "auto",
+                   Resizable = true,
+                   Draggable = true,
+                   CloseDialogOnOverlayClick = true
+               });
 
         if (result == true)
         {
@@ -362,7 +430,7 @@
 
                 foreach (var group in logicalGroups)
                 {
-                    flatList.Add(new GroupItem { GroupName = group.Name });
+                    flatList.Add(new GroupItem { GroupName = group.Name, LeaderName = group.GroupLeader?.Name });
                 }
             }
         }
@@ -379,31 +447,38 @@
 
             foreach (var org in allOrganisations)
             {
-                var orgGroups = org.Groups.Select(g => g.Name).ToList();
+                var groups = org.Groups.ToList();
 
-                if (orgGroups.Any())
+                if (groups.Any())
                 {
                     flatList.Add(new GroupItem
-                        {
-                            Organization = org.Name,
-                            Children = orgGroups
-                        });
-
-                    foreach (var groupName in orgGroups)
                     {
+                        Organization = org.Name,
+                        Children = groups.Select(g => g.Name).ToList()
+                    });
+
+                    foreach (var group in groups)
+                    {
+                        bool showGroup = true;
+
                         if (!string.IsNullOrEmpty(search))
                         {
                             bool orgMatch = org.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
-                            bool groupMatch = groupName.Contains(search, StringComparison.OrdinalIgnoreCase);
+                            bool groupMatch = group.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
 
-                            if (orgMatch || groupMatch)
+                            if (!orgMatch && !groupMatch)
                             {
-                                flatList.Add(new GroupItem { GroupName = groupName });
+                                showGroup = false;
                             }
                         }
-                        else
+
+                        if (showGroup)
                         {
-                            flatList.Add(new GroupItem { GroupName = groupName });
+                            flatList.Add(new GroupItem
+                            {
+                                GroupName = group.Name,
+                                LeaderName = group.GroupLeader?.Name
+                            });
                         }
                     }
                 }

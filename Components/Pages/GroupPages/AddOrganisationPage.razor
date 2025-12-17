@@ -34,12 +34,12 @@
             var newOrg = new Organisation { Name = model.Name };
             await OrganisationRepository.CreateAsync(newOrg);
 
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Siker", Detail = "A szervezet létrejött." });
             DialogService.Close(true);
+            DialogService.Alert("A szervezet sikeresen létrejött.", "Sikeres mentés", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Hiba", Detail = "Nem sikerült létrehozni a szervezetet." });
+            DialogService.Alert($"Hiba történt a művelet során: {ex.Message}", "Hiba", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
         }
         finally
         {
