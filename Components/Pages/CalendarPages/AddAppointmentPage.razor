@@ -1,44 +1,105 @@
-﻿@inject DialogService DialogService
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using CalendarWebApp.Data
+@using CalendarWebApp.Repository.IRepository
+
+@inject DialogService DialogService
+@inject AuthenticationStateProvider _AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IAppointmentRepository _appointmentRepository
 
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
+    <RadzenText>Hátralévő szabadnapok: @remainingFreeDays</RadzenText>
     <RadzenStack Gap="1rem">
+
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Title" Style="width: 4rem;" />
-            <RadzenTextBox @bind-Value="@model.Text" Name="Text" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="Text" Text="Title is required" />
+            <RadzenLabel Text="Típus" Style="width: 6rem;" />
+            <RadzenDropDown @bind-Value="model.Type"
+                            Name="Type"
+                            Data="@typeOptions"
+                            Style="width: 12rem;"
+                            Placeholder="(nincs)"
+                            AllowClear="false" />
+            <RadzenRequiredValidator Component="Type" Text="Kötelező típust választani" />
         </RadzenStack>
+
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Start" Style="width: 4rem;" />
-            <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="true" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="Start" Text="Start is required" />
+            <RadzenLabel Text="Dátum" Style="width: 6rem;" />
+            <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="false" Style="width: 12rem;" DateFormat="yyyy.MM.dd" />
+            <RadzenRequiredValidator Component="Start" Text="Kötelező dátumot választani" />
         </RadzenStack>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="End" Style="width: 4rem;" />
-            <RadzenDatePicker Name="End" @bind-Value="@model.End" ShowTime="true" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="End" Text="End is required" />
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Leírás" Style="width: 4rem;" />
+            <RadzenLabel Text=" " Style="width: 1rem;" />
+            <RadzenHtmlEditor @bind-Value=@model.Description style="height: 300px; width: 12 rem;" UploadUrl="upload/image">
+                <RadzenHtmlEditorUndo />
+                <RadzenHtmlEditorRedo />
+                <RadzenHtmlEditorSeparator />
+                <RadzenHtmlEditorBold />
+                <RadzenHtmlEditorItalic />
+                <RadzenHtmlEditorUnderline />
+                <RadzenHtmlEditorStrikeThrough />
+                <RadzenHtmlEditorSeparator />
+                <RadzenHtmlEditorColor />
+                <RadzenHtmlEditorBackground />
+                <RadzenHtmlEditorRemoveFormat />
+            </RadzenHtmlEditor>
         </RadzenStack>
+
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
-            <RadzenButton ButtonType="ButtonType.Submit" Text="Save" />
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Mentés" />
         </RadzenStack>
     </RadzenStack>
 </RadzenTemplateForm>
 @code {
     [Parameter]
     public DateTime Start { get; set; }
+    public Appointment model = new Appointment();
 
-    [Parameter]
-    public DateTime End { get; set; }
+    private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés", "Táppénz" };
+    private int remainingFreeDays;
 
-    Appointment model = new Appointment();
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var claimsPrincipal = authState.User;
+        var user = await UserManager.GetUserAsync(claimsPrincipal);
+
+        if (user != null)
+        {
+            model.UserId = user.Id;
+            int daysTaken = await _appointmentRepository.CalculateFreeDays(user.Id, Start.Year);
+            remainingFreeDays = user.TotalFreeDays - daysTaken;
+        }
+
+    }
 
     protected override void OnParametersSet()
     {
         model.Start = Start;
-        model.End = End;
+        model.End = Start.AddDays(1).AddSeconds(-1);
     }
 
-    void OnSubmit(Appointment model)
+    protected async Task OnSubmit(Appointment model)
     {
+        model.End = model.Start.AddDays(1).AddSeconds(-1);
+        if (model.Type == "Szabadság")
+        {
+            int requestedDays = (model.End.Date - model.Start.Date).Days + 1;
+            if (requestedDays > remainingFreeDays)
+            {
+                var result = await DialogService.Confirm("Nincs elég szabadnapod a szabadság kivételéhez!", "Túl kevés szabadnap",
+                    new ConfirmOptions() { OkButtonText = "Módosítás", CssClass = "glass-dialog" });
+                return;
+            }
+            if (model.Start > model.End)
+            {
+                var result = await DialogService.Confirm("Az esmemény nem kezdődhet később, mint ahogy befejeződik!", "Hiba a mentéskor",
+                    new ConfirmOptions() { OkButtonText = "Módosítás", CssClass = "glass-dialog" });
+                return;
+            }
+        }
         DialogService.Close(model);
     }
 }

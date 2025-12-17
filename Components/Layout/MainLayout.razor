@@ -1,18 +1,17 @@
 ﻿@inherits LayoutComponentBase
+@using Radzen
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <AuthorizeView>
+            <NavMenu></NavMenu>
+        </AuthorizeView>
+        
+        <div class="content px-4 content-glass-container">
+            @Body
         </div>
 
-        <article class="content px-4">
-            @Body
-        </article>
     </main>
 </div>
 
@@ -23,3 +22,4 @@
 </div>
 
 <RadzenComponents @rendermode="InteractiveServer" />
+<RadzenTooltip />

@@ -1,0 +1,564 @@
+﻿@page "/sharedcalendar"
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Radzen
+@using System.Collections
+@using Microsoft.EntityFrameworkCore
+@using CalendarWebApp.Utility
+@using CalendarWebApp.Repository.IRepository
+@using MyAppointment = RadzenBlazorDemos.Appointment
+@using CalendarWebApp.Data
+@using MyGroup = CalendarWebApp.Data.Group
+@attribute [Authorize]
+
+@inject IAppointmentRepository _appointmentRepository
+@inject UserManager<ApplicationUser> UserManager
+
+@inject IOrganisationRepository OrganisationRepository
+@inject IGroupRepository GroupRepository
+@inject ApplicationDbContext DbContext
+
+@inject DialogService DialogService
+
+<div class="liquid-calendar-wrapper rz-p-4">
+
+    <div class="glass-section rz-mb-4">
+        <RadzenText TextStyle="TextStyle.H5" class="section-title">Szűrés csoportra</RadzenText>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-3" Wrap="FlexWrap.Wrap">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenLabel Text="Hierarchikus" Style="font-weight: 600; color: #233D4D;" />
+                <RadzenSwitch @bind-Value=@isLogical Change="@(async (bool val) => { await Populate(); await FilterEmployees(); })" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Switch value" } })" />
+                <RadzenLabel Text="Logikai" Style="font-weight: 600; color: #233D4D;" />
+            </RadzenStack>
+            <RadzenDropDown @ref=dd
+                            @bind-Value=@values
+                            TValue="IEnumerable<string>"
+                            AllowClear="true"
+                            Data=@groupedData
+                            ItemRender="ItemRender"
+                            Style="flex-grow: 1; min-width: 250px;"
+                            class="glass-dropdown responsive-dropdown">
+                <HeaderTemplate>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-2">
+                        <RadzenCheckBox TValue="bool?" TriState=false Value="@AreAllSelected()" Change="@SelectAll" title="@(dd.SelectAllText)" Disabled=@(!groupedData.Any()) />
+                        <input id="@($"{dd.SearchID}")" @oninput=@Search placeholder="Keresés..." class="glass-search-input" autocomplete="off" />
+                    </RadzenStack>
+                </HeaderTemplate>
+                <Template>
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenCheckBox TValue="bool?" TriState=false Value="@IsGroupSelected(context)" Change="@(args => SelectGroup(args, (GroupItem)context))" />
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" Style="margin-inline-start: 0.5rem; cursor: pointer;" onclick="event.target.closest('.rz-dropdown-item').querySelector('.rz-chkbox-box').click()">
+                            <RadzenText Text="@(context.Organization ?? context.GroupName)"
+                                        Style=@($"color: #233D4D; font-weight: {(context.Organization != null ? "800" : "500")}; margin: 0;") />
+
+                            @if (!string.IsNullOrEmpty(context.LeaderName))
+                            {
+                                <RadzenText Text="@($"Csoportvezető: {context.LeaderName}")"
+                                            Style="font-size: 0.75rem; color: #6c757d; margin: 0;" />
+                            }
+                        </RadzenStack>
+                    </RadzenStack>
+                </Template>
+                <ValueTemplate>
+                    @string.Join(", ", values ?? Enumerable.Empty<string>())
+                </ValueTemplate>
+            </RadzenDropDown>
+
+            <div class="button-group">
+                <AuthorizeView Roles="@SD.Role_Group_Leader">
+                    @if (isLogical)
+                    {
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddGroupDialog">
+                            <span class="bi bi-plus-square" aria-hidden="true"></span>
+                        </button>
+                        <button type="submit" class="btn btn-sm btn-warning group-button" @onclick="OpenEditLogicalGroupDialog">
+                            <span class="bi bi-pencil-square" aria-hidden="true"></span> <span class="btn-text">SZERKESZTÉS</span>
+                        </button>
+                    }
+                </AuthorizeView>
+                <AuthorizeView Roles="@SD.Role_God">
+                    @if (isLogical)
+                    {
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddGroupDialog">
+                            <span class="bi bi-plus-square" aria-hidden="true"></span> <span class="btn-text">HOZZÁADÁS</span>
+                        </button>
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenEditLogicalGroupDialog">
+                            <span class="bi bi-pencil-square" aria-hidden="true"></span> <span class="btn-text">SZERKESZTÉS</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddOrganisationDialog">
+                            <span class="bi bi-plus-square" aria-hidden="true"></span> SZERVEZET HOZZÁADÁSA
+                        </button>
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenAddHierarchicalGroupDialog">
+                            <span class="bi bi-plus-square" aria-hidden="true"></span> CSOPORT HOZZÁADÁSA
+                        </button>
+                        <button type="submit" class="btn btn-sm group-button" @onclick="OpenEditHierarchicalGroupDialog">
+                            <span class="bi bi-pencil-square" aria-hidden="true"></span> <span class="btn-text">SZERKESZTÉS</span>
+                        </button>
+                    }
+                </AuthorizeView>
+            </div>
+        </RadzenStack>
+            
+        <RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true"
+                        FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        AllowPaging="true" PageSize="4" AllowSorting="true" Data="@employees"
+                        SelectionMode="DataGridSelectionMode.Multiple"
+                        Value="@selectedEmployees"
+                        ValueChanged="@(async (IList<ApplicationUser> args) => { selectedEmployees = args; await LoadAppointments(); })"
+                        class="glass-grid">
+            <Columns>
+                <RadzenDataGridColumn Width="50px" Sortable="false" Filterable="false">
+                    <HeaderTemplate>
+                        <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?"
+                                        Value="@(selectedEmployees == null || selectedEmployees?.Any() != true ? false : !employees.All(i => selectedEmployees.Contains(i)) ? null : employees.Any(i => selectedEmployees.Contains(i)))"
+                                        Change="@(async args => { selectedEmployees = args == true ? employees.ToList() : null; await LoadAppointments(); })" />
+                    </HeaderTemplate>
+                    <Template Context="data">
+                        <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedEmployees != null && selectedEmployees.Contains(data))"
+                                        TValue="bool" Change=@(args => { if (!allowRowSelectOnRowClick) { grid.SelectRow(data); } }) />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(ApplicationUser.Name)" Title="Név" />
+                <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
+                @if (!isLogical)
+                {
+                    <RadzenDataGridColumn Title="Szervezet">
+                        <Template Context="user">
+                            @user.HierarchicalGroup?.Organisation?.Name
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn Title="Csoport">
+                        <Template Context="user">
+                            @user.HierarchicalGroup?.Name
+                            <RadzenText Style="font-size: 0.75rem; color: #6c757d; margin: 0;">Csoportvezető: @user.HierarchicalGroup?.GroupLeader.Name</RadzenText>
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
+                else
+                {
+                    <RadzenDataGridColumn Title="Logikai csoportok">
+                        <Template Context="user">
+                            @string.Join(", ", user.LogicalGroups.Select(u => u.Name).ToList())
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+
+    @if (isProcessing)
+    {
+        <div class="d-flex flex-column align-items-center justify-content-center" style="height: 200px;">
+            <img src="/img/loading.gif" alt="loading" style="width: 50px;" />
+        </div>
+    }
+    else
+    {
+        <div class="glass-section">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-4">
+                <RadzenLabel Text="Időszak:" Style="font-weight: 800; color: #233D4D; font-size: 1.2rem;" />
+                <RadzenDatePicker @bind-Value="@viewDate" DateFormat="yyyy MMMM" Change="@OnViewDateChanged" ShowTime="false" class="glass-datepicker" />
+            </RadzenStack>
+
+            @if (selectedEmployees != null && selectedEmployees.Any())
+            {
+                <div class="matrix-scroll-container">
+                    <table class="matrix-table">
+                        <thead>
+                            <tr>
+                                <th class="sticky-col sticky-header">Név</th>
+                                @for (int day = 1; day <= DateTime.DaysInMonth(viewDate.Year, viewDate.Month); day++)
+                                {
+                                    var currentDayDate = new DateTime(viewDate.Year, viewDate.Month, day);
+                                    <th class="@(IsWeekend(currentDayDate) ? "weekend-header" : "") sticky-header">
+                                        <div class="day-number">@day</div>
+                                        <div class="day-name">@currentDayDate.ToString("ddd")</div>
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in selectedEmployees)
+                            {
+                                <tr>
+                                    <td class="sticky-col name-cell">
+                                        <div class="name-text">@emp.Name</div>
+                                    </td>
+                                    @for (int day = 1; day <= DateTime.DaysInMonth(viewDate.Year, viewDate.Month); day++)
+                                    {
+                                        var dateToCheck = new DateTime(viewDate.Year, viewDate.Month, day);
+                                        var appointment = GetAppointmentForUserAndDate(emp.Id, dateToCheck);
+                                        var bgStyle = GetColorForType(appointment?.Type);
+                                        var isWeekend = IsWeekend(dateToCheck);
+
+                                        <td class="matrix-cell @(isWeekend ? "weekend-cell" : "")" style="@bgStyle" title="@(appointment?.Type ?? "")">
+                                            @if (appointment != null)
+                                            {
+                                                <span class="event-indicator">@appointment.Type?.FirstOrDefault()</span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="glass-alert">
+                    <RadzenIcon Icon="info" /> Válassz ki legalább egy felhasználót a fenti listából a táblázat megtekintéséhez!
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool isProcessing { get; set; } = true;
+
+    private bool allowRowSelectOnRowClick = true;
+    private IEnumerable<ApplicationUser> employees;
+    private IList<ApplicationUser>? selectedEmployees;
+    private RadzenDataGrid<ApplicationUser> grid;
+    private DateTime viewDate = DateTime.Today;
+
+    private RadzenDropDown<IEnumerable<string>> dd;
+    private IEnumerable<string> values;
+    private IEnumerable<GroupItem> groupedData = new List<GroupItem>();
+    private string search;
+
+    private bool isLogical = false;
+
+
+    private class GroupItem
+    {
+        public string Organization { get; set; }
+        public string GroupName { get; set; }
+        public string LeaderName { get; set; }
+        public IEnumerable<string> Children { get; set; } = Enumerable.Empty<string>();
+    }
+
+    private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
+
+    private async Task OpenAddOrganisationDialog()
+    {
+        var result = await DialogService.OpenAsync<AddOrganisationPage>("Szervezet hozzáadása",
+               new Dictionary<string, object>(),
+               new DialogOptions() { CssClass = "glass-dialog", Width = "500px" });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddHierarchicalGroupDialog()
+    {
+        var result = await DialogService.OpenAsync<AddHierarchicalPage>("Hierarchikus Csoport hozzáadása",
+               new Dictionary<string, object>(),
+               new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenEditHierarchicalGroupDialog()
+    {
+        var result = await DialogService.OpenAsync<EditHierarchicalPage>("Hierarchikus Csoport szerkesztése",
+               new Dictionary<string, object>(),
+               new DialogOptions()
+               {
+                   CssClass = "glass-dialog",
+                   Width = "1500px",
+                   Height = "auto",
+                   Resizable = true,
+                   Draggable = true,
+                   CloseDialogOnOverlayClick = true
+               });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenEditLogicalGroupDialog()
+    {
+        var result = await DialogService.OpenAsync<EditLogicalPage>("Logikai Csoport szerkesztése",
+               new Dictionary<string, object>(),
+               new DialogOptions()
+               {
+                   CssClass = "glass-dialog",
+                   Width = "1500px",
+                   Height = "auto",
+                   Resizable = true,
+                   Draggable = true,
+                   CloseDialogOnOverlayClick = true
+               });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddGroupDialog()
+    {
+        var result = await DialogService.OpenAsync<AddLogicalPage>("Logikai Csoport hozzáadása",
+               new Dictionary<string, object>(),
+               new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+
+        if (result == true)
+        {
+            await Populate();
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadAppointments();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await Populate();
+        FilterEmployees();
+    }
+
+    private async Task LoadAppointments()
+    {
+        isProcessing = true;
+        if (selectedEmployees != null && selectedEmployees.Any())
+        {
+            var selectedUserIds = selectedEmployees.Select(u => u.Id).ToList();
+            appointments = await _appointmentRepository.GetByUsersAsync(selectedUserIds);
+        }
+        else
+        {
+            appointments = new List<MyAppointment>();
+        }
+        isProcessing = false;
+        StateHasChanged();
+    }
+
+    private void OnViewDateChanged(DateTime? value)
+    {
+        if (value.HasValue)
+        {
+            viewDate = value.Value;
+            StateHasChanged();
+        }
+    }
+
+    private bool IsWeekend(DateTime date)
+    {
+        return date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
+    }
+
+    private MyAppointment? GetAppointmentForUserAndDate(string userId, DateTime date)
+    {
+        if (appointments == null)
+        {
+            return null;
+        }
+        return appointments.FirstOrDefault(a =>
+            (a.UserId == userId) &&
+            a.Start.Date <= date.Date &&
+            a.End.Date >= date.Date
+        );
+    }
+
+    private string GetColorForType(string? type)
+    {
+        if (string.IsNullOrEmpty(type)) return "";
+        return type switch
+        {
+            "Szabadság" => "background-color: rgba(102, 187, 106, 0.7); box-shadow: inset 0 0 5px rgba(0,0,0,0.1);",
+            "HomeOffice" => "background-color: rgba(255, 160, 0, 0.7); box-shadow: inset 0 0 5px rgba(0,0,0,0.1);",
+            "Képzés" => "background-color: rgb(239, 83, 80, 0.7); box-shadow: inset 0 0 5px rgba(0,0,0,0.1);",
+            "Táppénz" => "background-color: rgba(144, 164, 174, 0.7); box-shadow: inset 0 0 5px rgba(0,0,0,0.1);",
+            _ => ""
+        };
+    }
+
+    private void ItemRender(DropDownItemRenderEventArgs<IEnumerable<string>> args)
+    {
+        args.Disabled = true;
+        var item = (GroupItem)args.Item;
+        args.Attributes.Add("style", $"opacity:1;{(item.Organization == null ? "margin-inline-start:1rem" : "")}");
+    }
+
+    private async Task Populate()
+    {
+        values = null;
+        var flatList = new List<GroupItem>();
+
+        if (isLogical)
+        {
+            var logicalGroups = await GroupRepository.GetAllLogicalAsync();
+            if (!string.IsNullOrEmpty(search))
+            {
+                logicalGroups = logicalGroups
+                    .Where(g => g.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            if (logicalGroups.Any())
+            {
+                flatList.Add(new GroupItem
+                {
+                    Organization = "Logikai Csoportok",
+                    Children = logicalGroups.Select(g => g.Name).ToList()
+                });
+
+                foreach (var group in logicalGroups)
+                {
+                    flatList.Add(new GroupItem { GroupName = group.Name, LeaderName = group.GroupLeader?.Name });
+                }
+            }
+        }
+        else
+        {
+            var allOrganisations = await OrganisationRepository.GetAllAsync();
+            if (!string.IsNullOrEmpty(search))
+            {
+                allOrganisations = allOrganisations.Where(org =>
+                    org.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    org.Groups.Any(g => g.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
+                ).ToList();
+            }
+
+            foreach (var org in allOrganisations)
+            {
+                var groups = org.Groups.ToList();
+
+                if (groups.Any())
+                {
+                    flatList.Add(new GroupItem
+                    {
+                        Organization = org.Name,
+                        Children = groups.Select(g => g.Name).ToList()
+                    });
+
+                    foreach (var group in groups)
+                    {
+                        bool showGroup = true;
+
+                        if (!string.IsNullOrEmpty(search))
+                        {
+                            bool orgMatch = org.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+                            bool groupMatch = group.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+
+                            if (!orgMatch && !groupMatch)
+                            {
+                                showGroup = false;
+                            }
+                        }
+
+                        if (showGroup)
+                        {
+                            flatList.Add(new GroupItem
+                            {
+                                GroupName = group.Name,
+                                LeaderName = group.GroupLeader?.Name
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        groupedData = flatList;
+    }
+
+    private bool? AreAllSelected()
+    {
+        var allDataItems = groupedData.Where(x => x.Organization == null).ToList();
+        if (!allDataItems.Any()) return false;
+        var selectedCount = allDataItems.Count(g => values?.Contains(g.GroupName) == true);
+        return selectedCount == allDataItems.Count ? true : selectedCount > 0 ? null : false;
+    }
+
+    private bool? IsGroupSelected(GroupItem item)
+    {
+        if (item.Organization != null)
+        {
+            if (!item.Children.Any()) return false;
+            var selectedChildren = item.Children.Count(childName => values?.Contains(childName) == true);
+            return selectedChildren == item.Children.Count() ? true : selectedChildren > 0 ? null : false;
+        }
+        return values?.Contains(item.GroupName) == true;
+    }
+
+    private void SelectGroup(bool? value, GroupItem item)
+    {
+        var currentValues = (values ?? Enumerable.Empty<string>()).ToList();
+        IEnumerable<string> itemsToToggle;
+        if (item.Organization != null) itemsToToggle = item.Children;
+        else itemsToToggle = new[] { item.GroupName };
+
+        if (value == true)
+        {
+            foreach (var g in itemsToToggle) if (!currentValues.Contains(g)) currentValues.Add(g);
+        }
+        else
+        {
+            foreach (var g in itemsToToggle) currentValues.Remove(g);
+        }
+        values = currentValues;
+        FilterEmployees();
+    }
+
+    private void SelectAll(bool? value)
+    {
+        values = value == true ? groupedData.Where(x => x.Organization == null).Select(x => x.GroupName).ToList() : Enumerable.Empty<string>();
+        FilterEmployees();
+    }
+
+    private async Task FilterEmployees()
+    {
+        var query = DbContext.Users
+            .Include(u => u.HierarchicalGroup)
+            .ThenInclude(g => g.Organisation)
+            .Include(u => u.LogicalGroups)
+            .AsQueryable();
+
+        if (values != null && values.Any())
+        {
+            if (isLogical)
+            {
+                query = query.Where(u => u.LogicalGroups.Any(lg => values.Contains(lg.Name)));
+            }
+            else
+            {
+                query = query.Where(u => values.Contains(u.HierarchicalGroup.Name));
+            }
+        }
+
+        employees = await query.ToListAsync();
+        selectedEmployees = null;
+        StateHasChanged();
+    }
+
+    private async Task Search(ChangeEventArgs args)
+    {
+        search = $"{args.Value}";
+        await Populate();
+    }
+}

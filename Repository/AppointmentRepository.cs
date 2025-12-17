@@ -14,6 +14,22 @@ namespace CalendarWebApp.Repository
             _db = db;
         }
 
+        public async Task<int> CalculateFreeDays(string userId, int year)
+        {
+            DateTime yearStart = new DateTime(year, 1, 1);
+            DateTime yearEnd = new DateTime(year, 12, 31);
+
+            var appointments = await _db.Appointment
+                .Where(a => a.UserId == userId
+                && a.Type == "Szabadság"
+                && a.Start.Date <= yearEnd
+                && a.End.Date >= yearStart)
+                .ToListAsync();
+            return appointments.Sum(x => (x.End.Date - x.Start.Date).Days + 1);
+
+
+        }
+
         public async Task<Appointment> CreateAsync(Appointment obj)
         {
             await _db.Appointment.AddAsync(obj);
@@ -32,9 +48,13 @@ namespace CalendarWebApp.Repository
             return false;
         }
 
-        public async Task<IEnumerable<Appointment>> GetAllAsync()
+        public async Task<IEnumerable<Appointment>> GetAllAsync(string? userId = null)
         {
-            return await _db.Appointment.ToListAsync();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return new List<Appointment>();
+            }
+            return await _db.Appointment.Where(a => a.UserId == userId).ToListAsync();
         }
 
         public async Task<Appointment> GetAsync(int id)
@@ -47,6 +67,13 @@ namespace CalendarWebApp.Repository
             return obj;
         }
 
+        public async Task<IEnumerable<Appointment>> GetByUsersAsync(List<string> userIds)
+        {
+            return await _db.Appointment
+                    .Where(a => userIds.Contains(a.UserId))
+                    .ToListAsync();
+        }
+
         public async Task<Appointment> UpdateAsync(Appointment obj)
         {
             var objFromDb = await _db.Appointment.FirstOrDefaultAsync(u => u.Id == obj.Id);
@@ -54,7 +81,10 @@ namespace CalendarWebApp.Repository
             {
                 objFromDb.Start = obj.Start;
                 objFromDb.End = obj.End;
-                objFromDb.Text = obj.Text;
+                objFromDb.Type = obj.Type;
+                objFromDb.Description = obj.Description;
+                objFromDb.UserId = obj.UserId;
+                objFromDb.Id = obj.Id;
                 _db.Appointment.Update(objFromDb);
                 await _db.SaveChangesAsync();
                 return objFromDb;

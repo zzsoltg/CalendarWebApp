@@ -1,0 +1,54 @@
+﻿@using CalendarWebApp.Data
+@using CalendarWebApp.Repository.IRepository
+@using Radzen
+@using Radzen.Blazor
+
+@inject IOrganisationRepository OrganisationRepository
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenTemplateForm TItem="OrganisationDto" Data="@model" Submit=@OnSubmit>
+    <RadzenStack Gap="1rem">
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Szervezet neve" Style="width: 8rem;" />
+            <RadzenTextBox Name="OrgName" @bind-Value="model.Name" Style="width: 18rem;" />
+            <RadzenRequiredValidator Component="OrgName" Text="A név kötelező!" Popup="true" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Class="rz-mt-2">
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Mentés" IsBusy="@isSaving" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    private OrganisationDto model = new();
+    private bool isSaving = false;
+
+    private async Task OnSubmit()
+    {
+        isSaving = true;
+        try
+        {
+            var newOrg = new Organisation { Name = model.Name };
+            await OrganisationRepository.CreateAsync(newOrg);
+
+            DialogService.Close(true);
+            DialogService.Alert("A szervezet sikeresen létrejött.", "Sikeres mentés", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
+        }
+        catch (Exception ex)
+        {
+            DialogService.Alert($"Hiba történt a művelet során: {ex.Message}", "Hiba", new AlertOptions() { OkButtonText = "OK", CssClass = "glass-dialog", Width = "600px" });
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public class OrganisationDto
+    {
+        public string Name { get; set; } = "";
+    }
+}

@@ -1,0 +1,32 @@
+﻿.nav-pills {
+    gap: 0.5rem;
+    width: 100%;
+}
+
+    .nav-pills ::deep .nav-link {
+        color: black;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-weight: 500;
+        transition: all 0.2s ease-in-out;
+        border: 1px solid transparent;
+    }
+
+        .nav-pills ::deep .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+
+        .nav-pills ::deep .nav-link.active {
+            background-color: #ffffff;
+            color: #0d47a1;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-color: #ffffff;
+        }
+
+        .nav-pills ::deep .nav-link i,
+        .nav-pills ::deep .nav-link span {
+            margin-right: 10px;
+        }

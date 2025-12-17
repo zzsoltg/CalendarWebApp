@@ -1,0 +1,340 @@
+﻿@using CalendarWebApp.Data
+@using CalendarWebApp.Repository.IRepository
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using Radzen
+@using Radzen.Blazor
+@using System.Collections.ObjectModel
+
+@inject IOrganisationRepository OrganisationRepository
+@inject IGroupRepository GroupRepository
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<div class="rz-p-2" style="min-width: 1000px;">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween">
+
+        <RadzenStack Style="flex: 1; width: 48%;">
+            <div class="panel-header">
+                <RadzenLabel Text="Csoport kiválasztása" Style="font-weight: bold; display: block; margin-bottom: 5px;" />
+                <RadzenDropDown @bind-Value="leftGroupId"
+                                Data="@groupedData"
+                                Change="@(args => OnGroupChanged(args, true))"
+                                ValueProperty="Id"
+                                TextProperty="Name"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Style="width: 100%;">
+                    <Template>
+                        @((context as GroupItem).Name)
+                    </Template>
+                </RadzenDropDown>
+            </div>
+
+            <RadzenDataGrid Data="@leftEmployees" TItem="ApplicationUser"
+                            AllowFiltering="true" AllowSorting="true" PageSize="10" AllowPaging="true"
+                            RowRender="@RowRender"
+                            ondragover="event.preventDefault()"
+                            @ondrop="@(() => MoveTo(leftEmployees, leftGroupId))"
+                            Class="glass-grid drag-grid">
+                <Columns>
+                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Name" Title="Név" />
+                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Email" Title="Email" />
+                </Columns>
+            </RadzenDataGrid>
+
+            <RadzenButton Text="Csoport Törlése" ButtonStyle="ButtonStyle.Danger"
+                          Disabled="@(leftGroupId == 0 || leftGroupHasUsersDb)"
+                          Click="@(() => DeleteGroup(leftGroupId))"
+                          Icon="delete" Size="ButtonSize.Small" />
+        </RadzenStack>
+
+        <RadzenStack Style="flex: 1; width: 48%;">
+            <div class="panel-header">
+                <RadzenLabel Text="Csoport kiválasztása" Style="font-weight: bold; display: block; margin-bottom: 5px;" />
+                <RadzenDropDown @bind-Value="rightGroupId"
+                                Data="@groupedData"
+                                Change="@(args => OnGroupChanged(args, false))"
+                                ValueProperty="Id"
+                                TextProperty="Name"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Style="width: 100%;">
+                    <Template>
+                        @((context as GroupItem).Name)
+                    </Template>
+                </RadzenDropDown>
+            </div>
+
+            <RadzenDataGrid Data="@rightEmployees" TItem="ApplicationUser"
+                            AllowFiltering="true" AllowSorting="true" PageSize="10" AllowPaging="true"
+                            RowRender="@RowRender"
+                            ondragover="event.preventDefault()"
+                            @ondrop="@(() => MoveTo(rightEmployees, rightGroupId))"
+                            Class="glass-grid drag-grid">
+                <Columns>
+                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Name" Title="Név" />
+                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Email" Title="Email" />
+                </Columns>
+            </RadzenDataGrid>
+
+            <RadzenButton Text="Csoport Törlése" ButtonStyle="ButtonStyle.Danger"
+                          Disabled="@(rightGroupId == 0 || rightGroupHasUsersDb)"
+                          Click="@(() => DeleteGroup(rightGroupId))"
+                          Icon="delete" Size="ButtonSize.Small" />
+        </RadzenStack>
+
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="1rem" Class="rz-mt-4">
+        <RadzenButton Text="Bezárás" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" />
+        <RadzenButton Text="Változtatások Mentése" ButtonStyle="ButtonStyle.Success" Icon="save" Click="@SaveChanges" Disabled="@(!hasChanges)" />
+    </RadzenStack>
+</div>
+
+@code {
+    private class GroupItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    private List<GroupItem> groupedData = new();
+
+    private int leftGroupId;
+    private int rightGroupId;
+
+    private ObservableCollection<ApplicationUser> leftEmployees = new();
+    private ObservableCollection<ApplicationUser> rightEmployees = new();
+
+    private ApplicationUser draggedItem;
+    private bool hasChanges = false;
+
+    private bool leftGroupHasUsersDb = false;
+    private bool rightGroupHasUsersDb = false;
+
+    private Dictionary<string, int> movedUsers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGroups();
+    }
+
+    private async Task LoadGroups()
+    {
+        var orgs = await OrganisationRepository.GetAllAsync();
+        groupedData.Clear();
+
+        foreach (var org in orgs)
+        {
+            foreach (var group in org.Groups)
+            {
+                groupedData.Add(new GroupItem { Id = group.Id, Name = $"{org.Name} / {group.Name}" });
+            }
+        }
+    }
+
+    private async Task LoadGroupMembers(int groupId, bool isLeft)
+    {
+        if (groupId == 0)
+        {
+            if (isLeft)
+            {
+                leftEmployees.Clear();
+                leftGroupHasUsersDb = false;
+            }
+            else
+            {
+                rightEmployees.Clear();
+                rightGroupHasUsersDb = false;
+            }
+            return;
+        }
+
+        var usersList = await DbContext.Users
+            .Where(u => u.HierarchicalGroupId == groupId)
+            .AsNoTracking()
+            .ToListAsync();
+
+        bool hasUsers = usersList.Any();
+
+        if (isLeft)
+        {
+            leftEmployees = new ObservableCollection<ApplicationUser>(usersList);
+            leftGroupHasUsersDb = hasUsers;
+        }
+        else
+        {
+            rightEmployees = new ObservableCollection<ApplicationUser>(usersList);
+            rightGroupHasUsersDb = hasUsers;
+        }
+    }
+
+    private async Task OnGroupChanged(object value, bool isLeft)
+    {
+        if (value == null) return;
+        int newGroupId = (int)value;
+
+        if (isLeft && newGroupId == rightGroupId && newGroupId != 0)
+        {
+            leftGroupId = 0;
+            DialogService.Alert("A két oszlopban nem lehet ugyanaz a csoport", "Hiba", new AlertOptions() { OkButtonText = "Rendben", CssClass = "glass-dialog" });
+            return;
+        }
+        if (!isLeft && newGroupId == leftGroupId && newGroupId != 0)
+        {
+            rightGroupId = 0;
+            DialogService.Alert("A két oszlopban nem lehet ugyanaz a csoport", "Hiba", new AlertOptions() { OkButtonText = "Rendben", CssClass = "glass-dialog" });
+            return;
+        }
+
+        
+        bool changesWereDiscarded = false;
+
+        
+        if (hasChanges)
+        {
+            movedUsers.Clear();
+            hasChanges = false;
+            changesWereDiscarded = true;
+        }
+
+        if (isLeft) leftGroupId = newGroupId;
+        else rightGroupId = newGroupId;
+
+        await LoadGroupMembers(newGroupId, isLeft);
+
+        if (changesWereDiscarded)
+        {
+            if (isLeft)
+            {
+                await LoadGroupMembers(rightGroupId, false);
+            }
+            else
+            {
+                await LoadGroupMembers(leftGroupId, true);
+            }
+        }
+    }
+
+
+    void RowRender(RowRenderEventArgs<ApplicationUser> args)
+    {
+        args.Attributes.Add("title", "Húzd át a másik oldalra");
+        args.Attributes.Add("style", "cursor:grab");
+        args.Attributes.Add("draggable", "true");
+        args.Attributes.Add("ondragstart", EventCallback.Factory.Create<DragEventArgs>(this, () => draggedItem = args.Data));
+    }
+
+    void MoveTo(ObservableCollection<ApplicationUser> targetCollection, int targetGroupId)
+    {
+        if (draggedItem == null || targetGroupId == 0) return;
+
+        var sourceCollection = leftEmployees.Contains(draggedItem) ? leftEmployees : rightEmployees;
+
+        if (sourceCollection == targetCollection) return;
+
+        sourceCollection.Remove(draggedItem);
+        targetCollection.Add(draggedItem);
+
+        if (movedUsers.ContainsKey(draggedItem.Id))
+        {
+            movedUsers[draggedItem.Id] = targetGroupId;
+        }
+        else
+        {
+            movedUsers.Add(draggedItem.Id, targetGroupId);
+        }
+
+        hasChanges = true;
+        draggedItem = null;
+    }
+
+
+    private async Task SaveChanges()
+    {
+        if (!movedUsers.Any()) return;
+
+        try
+        {
+            foreach (var kvp in movedUsers)
+            {
+                var userId = kvp.Key;
+                var newGroupId = kvp.Value;
+
+                var userToUpdate = await UserManager.FindByIdAsync(userId);
+
+                if (userToUpdate != null)
+                {
+                    userToUpdate.HierarchicalGroupId = newGroupId;
+
+                    var result = await UserManager.UpdateAsync(userToUpdate);
+
+                    if (!result.Succeeded)
+                    {
+                        throw new Exception($"Nem sikerült frissíteni a felhasználót ({userToUpdate.Name}): {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    }
+                }
+            }
+
+            movedUsers.Clear();
+            hasChanges = false;
+            if (leftGroupId != 0)
+            {
+                leftGroupHasUsersDb = await DbContext.Users.AnyAsync(u => u.HierarchicalGroupId == leftGroupId);
+            }
+
+            if (rightGroupId != 0)
+            {
+                rightGroupHasUsersDb = await DbContext.Users.AnyAsync(u => u.HierarchicalGroupId == rightGroupId);
+            }
+            DialogService.Alert("A felhasználók áthelyezése sikeresen megtörtént.", "Siker", new AlertOptions() { OkButtonText = "Rendben", CssClass = "glass-dialog" });
+        }
+        catch (Exception ex)
+        {
+            DialogService.Alert($"Hiba történt a mentés során: {ex.Message}", "Hiba", new AlertOptions { CssClass = "glass-dialog" });
+        }
+    }
+
+    private async Task DeleteGroup(int groupId)
+    {
+        var count = await DbContext.Users.CountAsync(u => u.HierarchicalGroupId == groupId);
+
+        if (count > 0)
+        {
+            DialogService.Alert("A csoport nem törölhető, mert még tartalmaz felhasználókat!", "Hiba", new AlertOptions { CssClass = "glass-dialog" });
+            return;
+        }
+
+        var confirm = await DialogService.Confirm("Biztosan törölni szeretnéd ezt a csoportot?", "Törlés megerősítése",
+            new ConfirmOptions() { OkButtonText = "Igen", CancelButtonText = "Nem", CssClass = "glass-dialog" });
+
+        if (confirm == true)
+        {
+            try
+            {
+                var success = await GroupRepository.DeleteAsync(groupId);
+
+                if (success)
+                {
+                    DialogService.Alert("A csoport sikeresen törölve.", "Siker", new AlertOptions() { OkButtonText = "Rendben", CssClass = "glass-dialog" });
+
+                    // UI frissítés
+                    await LoadGroups();
+                    if (leftGroupId == groupId) { leftGroupId = 0; leftEmployees.Clear(); }
+                    if (rightGroupId == groupId) { rightGroupId = 0; rightEmployees.Clear(); }
+                }
+                else
+                {
+                    DialogService.Alert("Nem sikerült törölni a csoportot (Repository hiba).", "Hiba", new AlertOptions() { CssClass = "glass-dialog" });
+                }
+            }
+            catch (Exception ex)
+            {
+                DialogService.Alert($"Nem sikerült törölni: {ex.Message}", "Hiba", new AlertOptions() { CssClass = "glass-dialog" });
+            }
+        }
+    }
+}

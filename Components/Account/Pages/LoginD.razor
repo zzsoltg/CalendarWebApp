@@ -1,0 +1,61 @@
+﻿@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using CalendarWebApp.Components.Layout
+
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IdentityRedirectManager RedirectManager
+
+@layout LoginLayout
+
+@page "/Account/LoginD"
+
+<PageTitle>Bejelentkezés - G-Call</PageTitle>
+
+<div class="login-container">
+    <div class="login-card">
+
+        <div class="brand-header">
+            <img src="img/G-Call_logo_transparent.png" alt="G-Call Logo" class="app-logo" />
+            <div class="app-title-wrapper">
+                <h1 class="app-name">Griffsoft Calendar</h1>
+                 @* <div class="underline"></div>  // Enélkül szebb*@
+            </div>
+        </div>
+
+        <h2 class="login-title">Bejelentkezés</h2>
+
+        <div class="action-area">
+            <button class="btn-microsoft" @onclick="LoginWithMicrosoft">
+                <img src="img/Microsoft_logo.svg.png" alt="Microsoft Logo" class="btn-icon" />
+                <span>Folytatás Microsoft fiókkal</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is not null && user.Identity.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/", forceLoad: false);
+        }
+    }
+
+
+    private void LoginWithMicrosoft()
+    {
+        NavigationManager.NavigateTo("/Account/Login");
+    }
+}

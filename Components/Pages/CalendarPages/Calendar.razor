@@ -1,151 +1,294 @@
 ﻿@page "/calendar"
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
 @using CalendarWebApp.Repository.IRepository
 @using MyAppointment = RadzenBlazorDemos.Appointment
+
 @inject DialogService DialogService
 @inject IAppointmentRepository _appointmentRepository
+@inject Radzen.TooltipService TooltipService
+@inject AuthenticationStateProvider _AuthenticationStateProvider
 
-@if (IsProcessing)
-{
-    <div class="position-absolute w-75 h-75 d-flex flex-column align-items-center bg-white justify-content-center">
-        <img src="/img/loading.gif" alt="loading" />
-    </div>
-}
-else
-{
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-4 rz-mb-6 rz-border-radius-1" Style="border: var(--rz-grid-cell-border);height:4rem;">
-        <RadzenLabel Text="Show Header:  " />
-        <RadzenSwitch @bind-Value=@showHeader />
-    </RadzenStack>
+<PageTitle>Naptár - G-Call</PageTitle>
 
-    <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender style="height: 768px;" TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=@showHeader
-                     TextProperty="Text" SelectedIndex="2"
-                     SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender DaySelect="@OnDaySelect"
-                     AppointmentMove=@OnAppointmentMove>
-        <RadzenDayView />
-        <RadzenWeekView />
-        <RadzenMonthView />
-    </RadzenScheduler>
 
-    @* <EventConsole @ref=@console /> *@   
-}
+    @if (isProcessing)
+    {
+        <div class="position-absolute w-75 h-75 d-flex flex-column align-items-center bg-white justify-content-center">
+            <img src="/img/loading.gif" alt="loading" />
+        </div>
+    }
+    else
+    {
+    <article class="content px-4 liquid-calendar-wrapper">
+        <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=true
+                            TextProperty="Type" SelectedIndex="0" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
+                            SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender
+                            AppointmentMove=@OnAppointmentMove>
+              <RadzenMonthView />
+        </RadzenScheduler>
+     </article>
+    }
 
 @code {
-    RadzenScheduler<MyAppointment> scheduler;
-    // EventConsole console;
-    Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
-    private bool IsProcessing { get; set; } = true;
-
-    bool showHeader = true;
-
-    IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
+    private RadzenScheduler<MyAppointment> scheduler;
+    private Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+    private bool isProcessing { get; set; } = true;
+    private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await LoadAppointments();
-            IsProcessing = false;
+            isProcessing = false;
             StateHasChanged();
         }
     }
 
     private async Task LoadAppointments()
     {
-        appointments = await _appointmentRepository.GetAllAsync();
+        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+        appointments = await _appointmentRepository.GetAllAsync(userId);
     }
 
-    void OnDaySelect(SchedulerDaySelectEventArgs args)
+    private void OnSlotRender(SchedulerSlotRenderEventArgs args)
     {
-        // console.Log($"DaySelect: Day={args.Day} AppointmentCount={args.Appointments.Count()}");
-    }
-
-    void OnSlotRender(SchedulerSlotRenderEventArgs args)
-    {
-        // Highlight today in month view
         if (args.View.Text == "Month" && args.Start.Date == DateTime.Today)
         {
-            args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
-        }
-
-        // Highlight working hours (9-18)
-        if ((args.View.Text == "Week" || args.View.Text == "Day") && args.Start.Hour > 8 && args.Start.Hour < 19)
-        {
-            args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
+            args.Attributes["style"] = "background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 15px rgba(255,255,255,0.6);";
         }
     }
 
-    async Task OnSlotSelect(SchedulerSlotSelectEventArgs args)
+    private async Task OnSlotSelect(SchedulerSlotSelectEventArgs args)
     {
-        // console.Log($"SlotSelect: Start={args.Start} End={args.End}");
+        var existingAppointment = appointments.FirstOrDefault(x => x.Start.Date == args.Start.Date);
 
-        if (args.View.Text != "Year")
+        if (existingAppointment != null)
         {
-            MyAppointment data = await DialogService.OpenAsync<AddAppointmentPage>("Add Appointment",
-                new Dictionary<string, object> { { "Start", args.Start }, { "End", args.End } });
-
-            if (data != null)
+            var copy = new MyAppointment
             {
-                await _appointmentRepository.CreateAsync(data);
+                Id = existingAppointment.Id,
+                Start = existingAppointment.Start,
+                End = existingAppointment.End,
+                Type = existingAppointment.Type,
+                Description = existingAppointment.Description,
+                UserId = existingAppointment.UserId
+            };
+
+            var data = await DialogService.OpenAsync<EditAppointmentPage>("Szerkesztés", new Dictionary<string, object> { { "Appointment", copy } }, new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+
+            if (data is MyAppointment model)
+            {
+                await _appointmentRepository.UpdateAsync(data);
+
                 await LoadAppointments();
-                // Either call the Reload method or reassign the Data property of the Scheduler
                 await scheduler.Reload();
+            }
+            else if (data is bool deleted && deleted)
+            {
+                await LoadAppointments();
+                await scheduler.Reload();
+            }
+        }
+        else
+        {
+            if (args.View.Text != "Year")
+            {
+                MyAppointment data = await DialogService.OpenAsync<AddAppointmentPage>("Esemény hozzáadása",
+                    new Dictionary<string, object> { { "Start", args.Start } }, new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
+
+                if (data != null)
+                {
+                    data.Start = data.Start.Date;
+                    data.End = data.Start.Date.AddDays(1).AddSeconds(-1);
+
+                    var targetDate = data.Start.Date;
+                    var checkAppointment = appointments.FirstOrDefault(x => x.Start.Date == targetDate);
+
+                    if (checkAppointment != null)
+                    {
+                        checkAppointment.Type = data.Type;
+                        checkAppointment.Description = data.Description;
+
+                        await _appointmentRepository.UpdateAsync(checkAppointment);
+                    }
+                    else
+                    {
+                        await _appointmentRepository.CreateAsync(data);
+                    }
+
+                    await LoadAppointments();
+                    // Either call the Reload method or reassign the Data property of the Scheduler
+                    await scheduler.Reload();
+                }
             }
         }
     }
 
-    async Task OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<MyAppointment> args)
+    private async Task OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<MyAppointment> args)
     {
-        // console.Log($"AppointmentSelect: Appointment={args.Data.Text}");
-
         var copy = new MyAppointment
         {
             Id = args.Data.Id,
             Start = args.Data.Start,
             End = args.Data.End,
-            Text = args.Data.Text
+            Type = args.Data.Type,
+            Description = args.Data.Description,
+            UserId = args.Data.UserId
         };
 
-        var data = await DialogService.OpenAsync<EditAppointmentPage>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } });
+        var data = await DialogService.OpenAsync<EditAppointmentPage>("Szerkesztés", new Dictionary<string, object> { { "Appointment", copy } }, new DialogOptions() { CssClass = "glass-dialog", Width = "600px" });
 
-        if (data != null)
+        if (data is MyAppointment model)
         {
-            await _appointmentRepository.UpdateAsync(data);
 
+            model.Start = model.Start.Date;
+            model.End = model.Start.Date.AddDays(1).AddSeconds(-1);
+
+            var targetDate = model.Start.Date;
+            var checkAppointment = appointments.FirstOrDefault(x => x.Id != model.Id && x.Start.Date == targetDate);
+
+            if (checkAppointment != null)
+            {
+                checkAppointment.Type = model.Type;
+                checkAppointment.Description = model.Description;
+
+                await _appointmentRepository.UpdateAsync(checkAppointment);
+                await _appointmentRepository.DeleteAsync(model.Id);
+            }
+            else
+            {
+                await _appointmentRepository.UpdateAsync(data);
+            }
+
+            await LoadAppointments();
+            await scheduler.Reload();
+        }
+        else if (data is bool deleted && deleted)
+        {
             await LoadAppointments();
             await scheduler.Reload();
         }
     }
 
-    void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<MyAppointment> args)
+    private void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<MyAppointment> args)
     {
         // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
-
-        if (args.Data.Text == "Birthday")
+        switch (args.Data.Type)
         {
-            args.Attributes["style"] = "background: red";
+            case "Szabadság":
+                args.Attributes["style"] = "background: rgba(102, 187, 106, 0.7);";
+                break;
+            case "HomeOffice":
+                args.Attributes["style"] = "background: rgba(255, 160, 0, 0.7)";
+                break;
+            case "Képzés":
+                args.Attributes["style"] = "background: rgb(239, 83, 80, 0.7)";
+                break;
+            case "Táppénz":
+                args.Attributes["style"] = "background: rgba(144, 164, 174, 0.7)";
+                break;
         }
+
     }
 
-    async Task OnAppointmentMove(SchedulerAppointmentMoveEventArgs args)
+    private async Task OnAppointmentMove(SchedulerAppointmentMoveEventArgs args)
     {
+        var targetDate = args.SlotDate.Date;
         var draggedAppointment = appointments.FirstOrDefault(x => x == args.Appointment.Data);
 
         if (draggedAppointment != null)
         {
-            var duration = draggedAppointment.End - draggedAppointment.Start;
+            var existingAppointment = appointments.FirstOrDefault(x => x.Start.Date == targetDate && x.Id != draggedAppointment.Id);
 
-            if (args.SlotDate.TimeOfDay == TimeSpan.Zero)
+            if (existingAppointment != null)
             {
-                draggedAppointment.Start = args.SlotDate.Date.Add(draggedAppointment.Start.TimeOfDay);
+                existingAppointment.Type = draggedAppointment.Type;
+                existingAppointment.Description = draggedAppointment.Description;
+                await _appointmentRepository.UpdateAsync(existingAppointment);
+                await _appointmentRepository.DeleteAsync(draggedAppointment.Id);
             }
             else
             {
-                draggedAppointment.Start = args.SlotDate;
+                draggedAppointment.Start = targetDate;
+                draggedAppointment.End = targetDate.AddDays(1).AddSeconds(-1);
+                await _appointmentRepository.UpdateAsync(draggedAppointment);
             }
-
-            draggedAppointment.End = draggedAppointment.Start.Add(duration);
-
+            await LoadAppointments();
             await scheduler.Reload();
         }
+    }
+
+
+
+    private void OnAppointmentMouseEnter(SchedulerAppointmentMouseEventArgs<Appointment> args)
+    {
+        static bool IsSingleDay(Appointment a)
+        {
+            var startDate = a.Start.Date;
+            var effectiveEndDate = a.End.TimeOfDay == TimeSpan.Zero ? a.End.Date.AddDays(-1) : a.End.Date;
+            return startDate == effectiveEndDate;
+        }
+
+        bool onlySunday = IsSingleDay(args.Data) && args.Data.Start.DayOfWeek == DayOfWeek.Sunday;
+        var position = onlySunday ? TooltipPosition.Left : TooltipPosition.Top;
+
+        TooltipService.Open(args.Element, ts =>
+        @<RadzenStack Orientation="Orientation.Vertical" Gap="0" class="rz-p-6" Style="min-width: 250px; max-width: 500px;">
+            <RadzenText TextStyle="TextStyle.H4" class="rz-mb-4" Style="color: var(--rz-tooltip-color);">
+                @args.Data.Type
+            </RadzenText>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="4px">
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color); width: 44px;">
+                    <strong>Date</strong>
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" Style="color: var(--rz-tooltip-color);">
+                    @args.Data.Start.ToString("dddd, MMMM d")
+                </RadzenText>
+            </RadzenStack>
+
+            @if (args.Data.Description != null)
+            {
+                <RadzenStack Orientation="Orientation.Vertical" Style="align-items:flex-start; margin-top: 8px;">
+                    <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-tooltip-color); width: 64px;">
+                        <strong>Description</strong>
+                    </RadzenText>
+                    <div style="max-height:150px; overflow:auto; white-space:pre-wrap; word-break:break-word; color: var(--rz-tooltip-color); font-size:0.95rem;">
+                        @FormatDescription(args.Data.Description)
+                    </div>
+                </RadzenStack>
+            }
+        </RadzenStack>, new TooltipOptions { Position = position, Duration = null });
+    }
+
+    private void OnAppointmentMouseLeave(SchedulerAppointmentMouseEventArgs<Appointment> args)
+    {
+        TooltipService.Close();
+    }
+
+    private static MarkupString FormatDescription(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        var trimmed = description!.Trim();
+
+        if (trimmed.Contains("<") && trimmed.Contains(">"))
+        {
+            return new MarkupString(trimmed);
+        }
+
+        var encoded = System.Text.Encodings.Web.HtmlEncoder.Default.Encode(trimmed)
+            .Replace("\r\n", "<br/>")
+            .Replace("\n", "<br/>");
+        return new MarkupString(encoded);
     }
 }

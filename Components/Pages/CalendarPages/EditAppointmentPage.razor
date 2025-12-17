@@ -1,40 +1,115 @@
-﻿@inject DialogService DialogService
+﻿@using CalendarWebApp.Repository.IRepository
+@using CalendarWebApp.Data
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+
+@inject DialogService DialogService
+@inject AuthenticationStateProvider _AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject IAppointmentRepository _appointmentRepository
 
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
+    <RadzenText>Hátralévő szabadnapok: @remainingFreeDays</RadzenText>
     <RadzenStack Gap="1rem">
+
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Title" Style="width: 6rem;" />
-            <RadzenTextBox @bind-Value="@model.Text" Name="Text" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="Text" Text="Title is required" />
+            <RadzenLabel Text="Típus" Style="width: 6rem;" />
+            <RadzenDropDown @bind-Value="model.Type"
+                            Name="Type"
+                            Data="@typeOptions"
+                            Style="width: 12rem;"
+                            Placeholder="(chosse a type)"
+                            AllowClear="false" />
+            <RadzenRequiredValidator Component="Type" Text="Kötelező típust választani" />
         </RadzenStack>
+
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="Start" Style="width: 6rem;" />
-            <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="true" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="Start" Text="Start is required" />
+            <RadzenLabel Text="Dátum" Style="width: 6rem;" />
+            <RadzenDatePicker @bind-Value="@model.Start" Name="Start" ShowTime="false" Style="width: 12rem;" DateFormat="yyyy.MM.dd" />
+            <RadzenRequiredValidator Component="Start" Text="Kötelező dátumot választani" />
         </RadzenStack>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-            <RadzenLabel Text="End" Style="width: 6rem;" />
-            <RadzenDatePicker Name="End" @bind-Value="@model.End" ShowTime="true" Style="width: 12rem;" />
-            <RadzenRequiredValidator Component="End" Text="End is required" />
+
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Stretch" Wrap="FlexWrap.Wrap">
+            <RadzenLabel Text="Leírás" Style="width: 4rem;" />
+            <RadzenLabel Text=" " Style="width: 1rem;" />
+            <RadzenHtmlEditor @bind-Value=@model.Description style="height: 300px; width: 12 rem;" UploadUrl="upload/image">
+                <RadzenHtmlEditorUndo />
+                <RadzenHtmlEditorRedo />
+                <RadzenHtmlEditorSeparator />
+                <RadzenHtmlEditorBold />
+                <RadzenHtmlEditorItalic />
+                <RadzenHtmlEditorUnderline />
+                <RadzenHtmlEditorStrikeThrough />
+                <RadzenHtmlEditorSeparator />
+                <RadzenHtmlEditorColor />
+                <RadzenHtmlEditorBackground />
+                <RadzenHtmlEditorRemoveFormat />
+            </RadzenHtmlEditor>
         </RadzenStack>
+
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
-            <RadzenButton ButtonType="ButtonType.Submit" Text="Save" />
+            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Text="Törlés" Click=@OnDelete Variant="Variant.Flat" />
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Mentés" />
         </RadzenStack>
     </RadzenStack>
 </RadzenTemplateForm>
 @code {
     [Parameter]
     public Appointment Appointment { get; set; }
+    public Appointment model = new Appointment();
 
-    Appointment model = new Appointment();
+    private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés", "Táppénz" };
+    private int remainingFreeDays;
 
     protected override void OnParametersSet()
     {
         model = Appointment;
     }
 
-    void OnSubmit(Appointment model)
+    protected override async Task OnInitializedAsync()
     {
+        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var claimsPrincipal = authState.User;
+        var user = await UserManager.GetUserAsync(claimsPrincipal);
+
+        if (user != null) {
+            int daysTaken = await _appointmentRepository.CalculateFreeDays(user.Id, Appointment.Start.Year);
+            remainingFreeDays = user.TotalFreeDays - daysTaken;
+        }
+
+    }
+
+    protected async Task OnSubmit(Appointment model)
+    {
+        model.End = model.Start.AddDays(1).AddSeconds(-1);
+        if (model.Type == "Szabadság")
+        {
+            int requestedDays = (model.End.Date - model.Start.Date).Days + 1;
+            int currentAppointmentDays = 0;
+            var originalAppointment = await _appointmentRepository.GetAsync(model.Id);
+            if (originalAppointment != null && originalAppointment.Type == "Szabadság")
+            {
+                currentAppointmentDays = (originalAppointment.End.Date - originalAppointment.Start.Date).Days + 1;
+            }
+            if (requestedDays > (remainingFreeDays + currentAppointmentDays))
+            {
+                var result = await DialogService.Confirm("Nincs elég szabadnapod a szabadság kivételéhez!", "Túl kevés szabadnap",
+                    new ConfirmOptions() { OkButtonText = "Módosítás" });
+                return;
+            }
+        }
         DialogService.Close(model);
+    }
+
+    protected async Task OnDelete()
+    {
+        var confirm = await DialogService.Confirm("Biztosan törölni szeretné ezt az időpontot?", "Törlés megerősítése",
+            new ConfirmOptions() { OkButtonText = "Igen", CancelButtonText = "Nem", CssClass = "glass-dialog" });
+
+        if (confirm == true)
+        {
+            await _appointmentRepository.DeleteAsync(model.Id);
+            DialogService.Close(true);
+        }
     }
 }

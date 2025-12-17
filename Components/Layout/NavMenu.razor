@@ -1,87 +1,90 @@
-﻿@implements IDisposable
+﻿@using Microsoft.AspNetCore.Identity
+@using CalendarWebApp.Data
+@using CalendarWebApp.Components.Account
+
+@implements IDisposable
 
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceScopeFactory ScopeFactory
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">CalendarWebApp</a>
-    </div>
-</div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="calendar">
-                <span class="bi bi-calendar-date" aria-hidden="true"></span> Calendar
-            </NavLink>
-        </div>
-
-        @* <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="auth">
-                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
-            </NavLink>
-        </div>
-
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
-                        </button>
-                    </form>
-                </div>
-            </Authorized>
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
-                    </NavLink>
-                </div>
-            </NotAuthorized>
-        </AuthorizeView> *@
-    </nav>
-</div>
+<nav class="glass-nav navbar navbar-expand-md">
+	<div class="container-fluid px-0">
+		<a class="navbar-brand d-flex align-items-center" href="calendar" style="color:inherit;">
+            <img src="/img/G-Call_logo_transparent.png" alt="Logo" width="130" height="90" class="me-2" />
+		</a>
+		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
+				aria-controls="navbarCollapse" aria-label="Toggle navigation" style="border-color: rgba(13,71,161,.2);">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+		<div class="collapse navbar-collapse" id="navbarCollapse">
+			<ul class="navbar-nav me-auto mb-2 mb-md-0">
+			</ul>
+			<ul class="d-flex navbar-nav mb-2 mb-md-0 align-items-center">
+				<li class="nav-item mx-2">
+					<NavLink class="nav-link" href="/calendar">
+						<span class="bi bi-calendar-date" aria-hidden="true"></span> NAPTÁR
+					</NavLink>
+				</li>
+				<li class="nav-item mx-2">
+					<NavLink class="nav-link" href="/sharedcalendar">
+						<span class="bi bi-people-fill" aria-hidden="true"></span> CSOPORTOK
+					</NavLink>
+				</li>
+				<AuthorizeView>
+					<Authorized>
+						<li class="nav-item mx-2">
+							<NavLink class="nav-link" href="Account/Manage">
+								<span class="bi bi-person-circle me-2" aria-hidden="true"></span> FIÓK
+							</NavLink>
+						</li>
+						<li class="nav-item mx-2">
+							<form action="Account/Logout" method="post" class="m-0">
+								<AntiforgeryToken />
+                                <input type="hidden" name="ReturnUrl" value="Account/LoginD" />
+								<button type="submit" class="btn btn-sm logout-button nav-link">
+									<span class="bi bi-box-arrow-right" aria-hidden="true"></span> KIJELENTKEZÉS
+								</button>
+							</form>
+						</li>
+					</Authorized>
+				</AuthorizeView>
+			</ul>
+		</div>
+	</div>
+</nav>
 
 @code {
-    private string? currentUrl;
+	private string? currentUrl;
+	private string? userName;
 
-    protected override void OnInitialized()
+	protected async override Task OnInitializedAsync()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var userPrincipal = authState.User;
+
+		if (userPrincipal.Identity is not null && userPrincipal.Identity.IsAuthenticated)
+		{
+			using (var scope = ScopeFactory.CreateScope())
+			{
+				var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+				var userInDb = await userManager.GetUserAsync(userPrincipal);
+
+				if (userInDb != null)
+				{
+					userName = userInDb.Name;
+				}
+			}
+
+			if (string.IsNullOrEmpty(userName))
+			{
+				userName = userPrincipal.Identity.Name;
+			}
+
+		}
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -94,5 +97,7 @@
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
+
+
 }
 

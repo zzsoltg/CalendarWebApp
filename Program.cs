@@ -19,7 +19,10 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+builder.Services.AddScoped<IOrganisationRepository, OrganisationRepository>();
+builder.Services.AddScoped<IGroupRepository, GroupRepository>();
 builder.Services.AddRadzenComponents();
+builder.Services.AddScoped<Radzen.TooltipService>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -34,11 +37,32 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+
+    options.Events.OnRedirectToReturnUrl = context =>
+    {
+        context.Response.Redirect("/Calendar");
+        return Task.CompletedTask;
+    };
+
+    options.Events.OnRedirectToLogout = context =>
+    {
+        context.Response.Redirect("/Account/Login");
+        return Task.CompletedTask;
+    };
+});
+
 
 var app = builder.Build();
 
