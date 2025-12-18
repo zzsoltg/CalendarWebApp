@@ -13,14 +13,11 @@
     background-color: transparent;
     padding-bottom: 10px;
     margin-bottom: 10px;
+    justify-content: center;
 }
 
-    .liquid-calendar-wrapper ::deep .rz-scheduler-nav .rz-button {
-        background-color: rgba(35, 61, 77);
-        color: #FFFFFF;
-        font-weight: 600;
-        border-radius: 8px;
-        transition: all 0.3s ease;
+    .liquid-calendar-wrapper ::deep .rz-scheduler-nav .rz-scheduler-nav-prev-next {
+        display: none;
     }
 
         .liquid-calendar-wrapper ::deep .rz-scheduler-nav .rz-button:hover {
@@ -33,8 +30,8 @@
             color: white;
         }
 
-.liquid-calendar-wrapper ::deep .rz-view-selector {
-    display: none; /* NEM MŰKÖDIK */
+.liquid-calendar-wrapper ::deep .rz-scheduler .rz-scheduler-nav .rz-scheduler-nav-views {
+    display: none;
 }
 
 .liquid-calendar-wrapper ::deep .rz-scheduler-nav-title {
@@ -94,4 +91,125 @@
 
 .liquid-calendar-wrapper ::deep .rz-scheduler-view-month {
     border: none;
+}
+
+.liquid-calendar-wrapper ::deep .rz-selectbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    border: none;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+    .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button {
+        border-radius: 8px;
+        border: 0.1px solid rgba(255, 255, 255, 0.3);
+        color: #233D4D;
+        font-weight: 900;
+        font-size: 0.9rem;
+        padding: 8px 16px;
+        transition: all 0.3s ease;
+        flex-grow: 1;
+        text-align: center;
+        backdrop-filter: blur(5px);
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+        .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button:hover:not(.rz-state-active) {
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.6);
+            transform: none;
+            cursor: pointer;
+        }
+
+    .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button.rz-state-active {
+        background-color: #233D4D;
+        color: #FFFFFF;
+        box-shadow: 0 4px 15px rgba(35, 61, 77, 0.3);
+    }
+
+    .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button .rz-button-text {
+        margin: 0;
+        width: 100%;
+    }
+
+
+px rgba(0, 0, 0, 0.1);
+padding: 20px;
+border: 1px solid rgba(255, 255, 255, 0.3);
+transition: transform 0.3s ease;
+}
+
+.glass-card:hover {
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+}
+
+/* Címek stílusa */
+.dashboard-title {
+    color: #233D4D !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    font-size: 1rem !important;
+    margin: 0;
+}
+
+/* Évszám/Hét badge */
+.year-badge {
+    background-color: #233D4D;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* Csoporttag lista sorai */
+.member-row {
+    padding: 8px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: background-color 0.2s;
+}
+
+    .member-row:hover {
+        background-color: rgba(255, 255, 255, 0.6);
+    }
+
+/* Dátum badge a listában */
+.date-badge {
+    color: #233D4D;
+    font-weight: 800;
+    font-size: 0.85rem;
+    background: rgba(255,255,255,0.5);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Görgetősáv testreszabása (Webkit) */
+.custom-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: rgba(35, 61, 77, 0.3);
+    border-radius: 3px;
+}
+
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(35, 61, 77, 0.6);
+    }
+
+@media (max-width: 768px) {
+    .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        flex-basis: 30%;
+    }
 }

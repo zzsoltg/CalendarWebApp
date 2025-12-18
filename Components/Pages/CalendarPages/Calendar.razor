@@ -2,6 +2,9 @@
 
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using CalendarWebApp.Data
 @attribute [Authorize]
 
 @using CalendarWebApp.Repository.IRepository
@@ -11,6 +14,8 @@
 @inject IAppointmentRepository _appointmentRepository
 @inject Radzen.TooltipService TooltipService
 @inject AuthenticationStateProvider _AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
 
 <PageTitle>Naptár - G-Call</PageTitle>
 
@@ -24,11 +29,30 @@
     else
     {
     <article class="content px-4 liquid-calendar-wrapper">
-        <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=true
-                            TextProperty="Type" SelectedIndex="0" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
-                            SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender
-                            AppointmentMove=@OnAppointmentMove>
-              <RadzenMonthView />
+
+        <RadzenStack AlignItems="AlignItems.Center">
+        <RadzenSelectBar TValue="int" @bind-Value="@selectedMonth" Change="@OnMonthChanged" Size="ButtonSize.Small">
+            <Items>
+                <RadzenSelectBarItem Value="1" Text="Január"/>
+                <RadzenSelectBarItem Value="2" Text="Február" />
+                <RadzenSelectBarItem Value="3" Text="Március" />
+                <RadzenSelectBarItem Value="4" Text="Április" />
+                <RadzenSelectBarItem Value="5" Text="Május" />
+                <RadzenSelectBarItem Value="6" Text="Június" />
+                <RadzenSelectBarItem Value="7" Text="Július"/>
+                <RadzenSelectBarItem Value="8" Text="Augusztus" />
+                <RadzenSelectBarItem Value="9" Text="Szeptember" />
+                <RadzenSelectBarItem Value="10" Text="Október" />
+                <RadzenSelectBarItem Value="11" Text="November" />
+                <RadzenSelectBarItem Value="12" Text="December" />
+            </Items>
+        </RadzenSelectBar>
+       </RadzenStack>
+        <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender Date="@currentDate" DateChanged="@OnDateChanged" TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=true
+                         TextProperty="Type" SelectedIndex="0" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
+                         SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender
+                         AppointmentMove=@OnAppointmentMove>
+            <RadzenMonthView />
         </RadzenScheduler>
      </article>
     }
@@ -38,6 +62,8 @@
     private Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
     private bool isProcessing { get; set; } = true;
     private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
+    private DateTime currentDate = DateTime.Today;
+    private int selectedMonth = DateTime.Today.Month;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -47,6 +73,18 @@
             isProcessing = false;
             StateHasChanged();
         }
+    }
+
+    private void OnMonthChanged(int month)
+    {
+        currentDate = new DateTime(DateTime.Today.Year, month, 1);
+        selectedMonth = month;
+    }
+
+    private void OnDateChanged(DateTime date)
+    {
+        currentDate = date;
+        selectedMonth = date.Month;
     }
 
     private async Task LoadAppointments()

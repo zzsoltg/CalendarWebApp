@@ -1,5 +1,6 @@
 ﻿@using CalendarWebApp.Data
 @using CalendarWebApp.Repository.IRepository
+@using CalendarWebApp.Utility
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
 @using Radzen
@@ -7,7 +8,7 @@
 @using System.Collections.ObjectModel
 
 @inject IOrganisationRepository OrganisationRepository
-@inject IGroupRepository GroupRepository
+@inject IGroupRepository _groupRepository
 @inject UserManager<ApplicationUser> UserManager
 @inject ApplicationDbContext DbContext
 @inject DialogService DialogService
@@ -15,7 +16,6 @@
 
 <div class="rz-p-2" style="min-width: 1000px;">
     <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween">
-
         <RadzenStack Style="flex: 1; width: 48%;">
             <div class="panel-header">
                 <RadzenLabel Text="Csoport kiválasztása" Style="font-weight: bold; display: block; margin-bottom: 5px;" />
@@ -31,24 +31,49 @@
                         @((context as GroupItem).Name)
                     </Template>
                 </RadzenDropDown>
+                        <RadzenLabel Text="Csoportvezető" Style="font-weight: bold; display: block; margin-top: 10px; margin-bottom: 5px;" />
+                        <RadzenDropDown @bind-Value="leftGroupLeaderId"
+                                        Data="@GetGroupMembersAsPotentialLeaders(true)"
+                                        Change="@(args => OnLeaderChanged(args, true))"
+                                        ValueProperty="Id"
+                                        TextProperty="Name"
+                                        AllowFiltering="true"
+                                        Placeholder="Válassz vezetőt a tagok közül..."
+                                        Style="width: 100%;"
+                                        Disabled="@(leftGroupId == 0)"
+                                        Class="@(string.IsNullOrEmpty(leftGroupLeaderId) ? "rz-border-danger" : "")"/>
+
+                        @if (string.IsNullOrEmpty(leftGroupLeaderId) && leftGroupId != 0)
+                        {
+                                <div style="color: var(--rz-danger); font-size: 0.8rem; margin-top: 2px;">Kötelező vezetőt választani mentés előtt!</div>
+                        }
             </div>
 
             <RadzenDataGrid Data="@leftEmployees" TItem="ApplicationUser"
                             AllowFiltering="true" AllowSorting="true" PageSize="10" AllowPaging="true"
-                            RowRender="@RowRender"
+                            RowRender="@(args => RowRender(args, leftGroupLeaderId))"
                             ondragover="event.preventDefault()"
                             @ondrop="@(() => MoveTo(leftEmployees, leftGroupId))"
                             Class="glass-grid drag-grid">
                 <Columns>
-                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Name" Title="Név" />
+                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Name" Title="Név">
+                         <Template Context="user">
+                            @if (user.Id == leftGroupLeaderId)
+                            {
+                                    <RadzenIcon Icon="stars" Style="color: orange; margin-right: 5px;" />
+                            }
+                            @user.Name
+                        </Template>
+                    </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="ApplicationUser" Property="Email" Title="Email" />
                 </Columns>
             </RadzenDataGrid>
 
             <RadzenButton Text="Csoport Törlése" ButtonStyle="ButtonStyle.Danger"
-                          Disabled="@(leftGroupId == 0 || leftGroupHasUsersDb)"
+                          Disabled="@(leftGroupId == 0 || leftEmployees.Count > 0)"
                           Click="@(() => DeleteGroup(leftGroupId))"
-                          Icon="delete" Size="ButtonSize.Small" />
+                          Icon="delete" Size="ButtonSize.Small" Class="rz-mt-2"
+                          title="Csak üres csoport törölhető"/>
         </RadzenStack>
 
         <RadzenStack Style="flex: 1; width: 48%;">
@@ -66,24 +91,50 @@
                         @((context as GroupItem).Name)
                     </Template>
                 </RadzenDropDown>
+                        <RadzenLabel Text="Csoportvezető" Style="font-weight: bold; display: block; margin-top: 10px; margin-bottom: 5px;" />
+
+                        <RadzenDropDown @bind-Value="rightGroupLeaderId"
+                                        Data="@GetGroupMembersAsPotentialLeaders(false)"
+                                        Change="@(args => OnLeaderChanged(args, false))"
+                                        ValueProperty="Id"
+                                        TextProperty="Name"
+                                        AllowFiltering="true"
+                                        Placeholder="Válassz vezetőt a tagok közül..."
+                                        Style="width: 100%;"
+                                        Disabled="@(rightGroupId == 0)"
+                                        Class="@(string.IsNullOrEmpty(rightGroupLeaderId) ? "rz-border-danger" : "")"/>
+
+                @if (string.IsNullOrEmpty(rightGroupLeaderId) && rightGroupId != 0)
+                {
+                    <div style="color: var(--rz-danger); font-size: 0.8rem; margin-top: 2px;">Kötelező vezetőt választani mentés előtt!</div>
+                }
             </div>
 
             <RadzenDataGrid Data="@rightEmployees" TItem="ApplicationUser"
                             AllowFiltering="true" AllowSorting="true" PageSize="10" AllowPaging="true"
-                            RowRender="@RowRender"
+                            RowRender="@(args => RowRender(args, rightGroupLeaderId))"
                             ondragover="event.preventDefault()"
                             @ondrop="@(() => MoveTo(rightEmployees, rightGroupId))"
                             Class="glass-grid drag-grid">
                 <Columns>
-                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Name" Title="Név" />
+                    <RadzenDataGridColumn TItem="ApplicationUser" Property="Name" Title="Név">
+                        <Template Context="user">
+                            @if (user.Id == rightGroupLeaderId)
+                            {
+                                    <RadzenIcon Icon="stars" Style="color: orange; margin-right: 5px;" />
+                            }
+                            @user.Name
+                        </Template>
+                    </RadzenDataGridColumn>
                     <RadzenDataGridColumn TItem="ApplicationUser" Property="Email" Title="Email" />
                 </Columns>
             </RadzenDataGrid>
 
             <RadzenButton Text="Csoport Törlése" ButtonStyle="ButtonStyle.Danger"
-                          Disabled="@(rightGroupId == 0 || rightGroupHasUsersDb)"
+                          Disabled="@(rightGroupId == 0 || rightEmployees.Count > 0)"
                           Click="@(() => DeleteGroup(rightGroupId))"
-                          Icon="delete" Size="ButtonSize.Small" />
+                          Icon="delete" Size="ButtonSize.Small" Class="rz-mt-2"
+                          title="Csak üres csoport törölhető"/>
         </RadzenStack>
 
     </RadzenStack>
@@ -103,8 +154,18 @@
 
     private List<GroupItem> groupedData = new();
 
+    // Lista az összes olyan emberről, aki technikailag LEHET vezető (Role alapján)
+    private HashSet<string> allUsersWithLeaderRole = new();
+
     private int leftGroupId;
     private int rightGroupId;
+
+    private string leftGroupLeaderId;
+    private string rightGroupLeaderId;
+
+    // Eredeti vezetők mentése, hogy tudjuk, volt-e változás
+    private string leftOriginalLeaderId;
+    private string rightOriginalLeaderId;
 
     private ObservableCollection<ApplicationUser> leftEmployees = new();
     private ObservableCollection<ApplicationUser> rightEmployees = new();
@@ -112,21 +173,23 @@
     private ApplicationUser draggedItem;
     private bool hasChanges = false;
 
-    private bool leftGroupHasUsersDb = false;
-    private bool rightGroupHasUsersDb = false;
-
+    // --- STATE MANAGEMENT ---
+    // Tagok mozgatása: Key=UserId, Value=TargetGroupId
     private Dictionary<string, int> movedUsers = new();
+
+    // Vezetők cseréje: Key=GroupId, Value=NewLeaderId
+    private Dictionary<int, string> pendingLeaderChanges = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadGroups();
+        await LoadUsersWithLeaderRole();
     }
 
     private async Task LoadGroups()
     {
         var orgs = await OrganisationRepository.GetAllAsync();
         groupedData.Clear();
-
         foreach (var org in orgs)
         {
             foreach (var group in org.Groups)
@@ -136,39 +199,61 @@
         }
     }
 
+    private async Task LoadUsersWithLeaderRole()
+    {
+        var leaders = await UserManager.GetUsersInRoleAsync(SD.Role_Group_Leader);
+        var gods = await UserManager.GetUsersInRoleAsync(SD.Role_God);
+        allUsersWithLeaderRole = leaders
+            .Concat(gods)
+            .Select(u => u.Id)
+            .ToHashSet();
+    }
+
+    // --- ÚJ LOGIKA: VEZETŐK LISTÁZÁSA ---
+    // Csak azokat listázzuk, akik JELENLEG (memóriában) a csoport tagjai, ÉS van vezetői joguk.
+    private IEnumerable<ApplicationUser> GetGroupMembersAsPotentialLeaders(bool isLeft)
+    {
+        var currentEmployees = isLeft ? leftEmployees : rightEmployees;
+
+        return currentEmployees
+            .Where(u => allUsersWithLeaderRole.Contains(u.Id)) // Csak akinek van joga
+            .OrderBy(u => u.Name)
+            .ToList();
+    }
+
     private async Task LoadGroupMembers(int groupId, bool isLeft)
     {
         if (groupId == 0)
         {
-            if (isLeft)
-            {
-                leftEmployees.Clear();
-                leftGroupHasUsersDb = false;
-            }
-            else
-            {
-                rightEmployees.Clear();
-                rightGroupHasUsersDb = false;
-            }
+            if (isLeft) { leftEmployees.Clear(); leftGroupLeaderId = null; leftOriginalLeaderId = null; }
+            else { rightEmployees.Clear(); rightGroupLeaderId = null; rightOriginalLeaderId = null; }
             return;
         }
+
+        // DB-ből betöltés
+        var group = await _groupRepository.GetByIdAsync(groupId);
+        string dbLeaderId = group?.GroupLeaderId;
+
+        // Ha van már memóriában pending változás erre a csoportra (pl. vissza navigálás után), azt használjuk?
+        // Most egyszerűsítünk: betöltjük a DB állapotot. A "MoveTo"-k és "LeaderChange"-ek elvesznek váltáskor,
+        // mivel az OnGroupChanged-ben törlünk mindent.
 
         var usersList = await DbContext.Users
             .Where(u => u.HierarchicalGroupId == groupId)
             .AsNoTracking()
             .ToListAsync();
 
-        bool hasUsers = usersList.Any();
-
         if (isLeft)
         {
             leftEmployees = new ObservableCollection<ApplicationUser>(usersList);
-            leftGroupHasUsersDb = hasUsers;
+            leftGroupLeaderId = dbLeaderId;
+            leftOriginalLeaderId = dbLeaderId;
         }
         else
         {
             rightEmployees = new ObservableCollection<ApplicationUser>(usersList);
-            rightGroupHasUsersDb = hasUsers;
+            rightGroupLeaderId = dbLeaderId;
+            rightOriginalLeaderId = dbLeaderId;
         }
     }
 
@@ -190,13 +275,12 @@
             return;
         }
 
-        
         bool changesWereDiscarded = false;
-
-        
         if (hasChanges)
         {
+            // Törlünk minden nem mentett változást
             movedUsers.Clear();
+            pendingLeaderChanges.Clear();
             hasChanges = false;
             changesWereDiscarded = true;
         }
@@ -208,20 +292,37 @@
 
         if (changesWereDiscarded)
         {
-            if (isLeft)
-            {
-                await LoadGroupMembers(rightGroupId, false);
-            }
-            else
-            {
-                await LoadGroupMembers(leftGroupId, true);
-            }
+            if (isLeft) await LoadGroupMembers(rightGroupId, false);
+            else await LoadGroupMembers(leftGroupId, true);
         }
     }
 
-
-    void RowRender(RowRenderEventArgs<ApplicationUser> args)
+    // --- CSAK MEMÓRIA FRISSÍTÉS ---
+    private void OnLeaderChanged(object value, bool isLeft)
     {
+        var newLeaderId = (string)value;
+        int groupId = isLeft ? leftGroupId : rightGroupId;
+
+        // Nem mentünk DB-be, csak beállítjuk a UI változót és a pending listát
+        if (isLeft) leftGroupLeaderId = newLeaderId;
+        else rightGroupLeaderId = newLeaderId;
+
+        // Rögzítjük a változást
+        if (pendingLeaderChanges.ContainsKey(groupId))
+        {
+            pendingLeaderChanges[groupId] = newLeaderId;
+        }
+        else
+        {
+            pendingLeaderChanges.Add(groupId, newLeaderId);
+        }
+
+        hasChanges = true;
+    }
+
+    void RowRender(RowRenderEventArgs<ApplicationUser> args, string leaderId)
+    {
+        // Mindenki mozgatható, még a vezető is!
         args.Attributes.Add("title", "Húzd át a másik oldalra");
         args.Attributes.Add("style", "cursor:grab");
         args.Attributes.Add("draggable", "true");
@@ -232,13 +333,33 @@
     {
         if (draggedItem == null || targetGroupId == 0) return;
 
+        // Forrás és Cél kollekció
         var sourceCollection = leftEmployees.Contains(draggedItem) ? leftEmployees : rightEmployees;
-
         if (sourceCollection == targetCollection) return;
 
+        // Ellenőrizzük, hogy a mozgatott ember volt-e a forrás csoport vezetője
+        bool isLeftSource = (sourceCollection == leftEmployees);
+        string sourceLeaderId = isLeftSource ? leftGroupLeaderId : rightGroupLeaderId;
+
+        if (draggedItem.Id == sourceLeaderId)
+        {
+            // Ha a vezetőt húzzuk el, töröljük a vezető kijelölést a forrás csoportban!
+            // Így a UI-n a dropdown "üres" lesz (vagy piros), jelezve, hogy választani kell.
+            if (isLeftSource) leftGroupLeaderId = null;
+            else rightGroupLeaderId = null;
+
+            // A forrás csoport bekerül a pending változások közé "null" vezetővel (egyelőre)
+            // De ez a SaveChanges validációnál majd kibukik, ha nem választanak újat.
+            int sourceGroupId = isLeftSource ? leftGroupId : rightGroupId;
+            if (pendingLeaderChanges.ContainsKey(sourceGroupId)) pendingLeaderChanges[sourceGroupId] = null;
+            else pendingLeaderChanges.Add(sourceGroupId, null);
+        }
+
+        // Mozgatás végrehajtása memóriában
         sourceCollection.Remove(draggedItem);
         targetCollection.Add(draggedItem);
 
+        // movedUsers frissítése
         if (movedUsers.ContainsKey(draggedItem.Id))
         {
             movedUsers[draggedItem.Id] = targetGroupId;
@@ -252,45 +373,69 @@
         draggedItem = null;
     }
 
-
+    // --- MENTÉS: ITT VALIDÁLUNK ÉS ÍRUNK DB-BE ---
     private async Task SaveChanges()
     {
-        if (!movedUsers.Any()) return;
+        // 1. VALIDÁCIÓ: Minden nem üres, megnyitott csoportnak kell lennie vezetőjének!
+        if (leftGroupId != 0 && string.IsNullOrEmpty(leftGroupLeaderId) && leftEmployees.Any())
+        {
+            DialogService.Alert("A bal oldali csoportnak nincs kijelölt vezetője! Válassz vezetőt a tagok közül.", "Hiányzó vezető", new AlertOptions { CssClass = "glass-dialog" });
+            return;
+        }
+        if (rightGroupId != 0 && string.IsNullOrEmpty(rightGroupLeaderId) && rightEmployees.Any())
+        {
+            DialogService.Alert("A jobb oldali csoportnak nincs kijelölt vezetője! Válassz vezetőt a tagok közül.", "Hiányzó vezető", new AlertOptions { CssClass = "glass-dialog" });
+            return;
+        }
 
         try
         {
+            // 2. Felhasználók mozgatása (User tábla)
+            // Fontos: Előbb a usereket mozgatjuk, hogy biztosan az új csoportban legyenek, amikor a csoport vezetőjét beállítjuk (bár FK szinten ez nem mindig szigorú, de logikusabb).
             foreach (var kvp in movedUsers)
             {
                 var userId = kvp.Key;
                 var newGroupId = kvp.Value;
 
                 var userToUpdate = await UserManager.FindByIdAsync(userId);
-
                 if (userToUpdate != null)
                 {
                     userToUpdate.HierarchicalGroupId = newGroupId;
-
-                    var result = await UserManager.UpdateAsync(userToUpdate);
-
-                    if (!result.Succeeded)
-                    {
-                        throw new Exception($"Nem sikerült frissíteni a felhasználót ({userToUpdate.Name}): {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                    }
+                    await UserManager.UpdateAsync(userToUpdate);
                 }
             }
 
-            movedUsers.Clear();
-            hasChanges = false;
-            if (leftGroupId != 0)
+            // 3. Csoportvezetők frissítése (Group tábla)
+            // Itt most már nem csak a pending listát nézzük, hanem a UI aktuális állapotát,
+            // mert lehet, hogy a pending-be nem került be minden (pl. ha nem volt change event, de a validáció átment).
+            // De a legegyszerűbb, ha explicit frissítjük a két megnyitott csoportot, ha volt bármi változás.
+
+            var groupsToUpdate = new List<(int GroupId, string LeaderId)>();
+            if (leftGroupId != 0) groupsToUpdate.Add((leftGroupId, leftGroupLeaderId));
+            if (rightGroupId != 0) groupsToUpdate.Add((rightGroupId, rightGroupLeaderId));
+
+            foreach (var item in groupsToUpdate)
             {
-                leftGroupHasUsersDb = await DbContext.Users.AnyAsync(u => u.HierarchicalGroupId == leftGroupId);
+                // Csak akkor hívjuk a DB-t, ha tényleg változott az eredetihez képest, vagy benne van a pending-ben
+                // (Az egyszerűség kedvéért most mindig update-elünk, biztonságos)
+                var group = await _groupRepository.GetByIdAsync(item.GroupId);
+                if (group != null && group.GroupLeaderId != item.LeaderId)
+                {
+                    group.GroupLeaderId = item.LeaderId;
+                    await _groupRepository.UpdateAsync(group);
+                }
             }
 
-            if (rightGroupId != 0)
-            {
-                rightGroupHasUsersDb = await DbContext.Users.AnyAsync(u => u.HierarchicalGroupId == rightGroupId);
-            }
-            DialogService.Alert("A felhasználók áthelyezése sikeresen megtörtént.", "Siker", new AlertOptions() { OkButtonText = "Rendben", CssClass = "glass-dialog" });
+            // Reset
+            movedUsers.Clear();
+            pendingLeaderChanges.Clear();
+            hasChanges = false;
+
+            // Frissítjük az "eredeti" állapotot a jelenlegire
+            leftOriginalLeaderId = leftGroupLeaderId;
+            rightOriginalLeaderId = rightGroupLeaderId;
+
+            DialogService.Alert("Minden változás sikeresen mentve.", "Siker", new AlertOptions() { OkButtonText = "Rendben", CssClass = "glass-dialog" });
         }
         catch (Exception ex)
         {
@@ -298,42 +443,43 @@
         }
     }
 
+    // --- EGYSZERŰSÍTETT TÖRLÉS ---
     private async Task DeleteGroup(int groupId)
     {
-        var count = await DbContext.Users.CountAsync(u => u.HierarchicalGroupId == groupId);
+        // 1. Ellenőrizzük, hogy üres-e a csoport (DB szinten)
+        var usersCount = await DbContext.Users.CountAsync(u => u.HierarchicalGroupId == groupId);
 
-        if (count > 0)
+        if (usersCount > 0)
         {
-            DialogService.Alert("A csoport nem törölhető, mert még tartalmaz felhasználókat!", "Hiba", new AlertOptions { CssClass = "glass-dialog" });
+            DialogService.Alert("A csoport nem törölhető, mert nem üres. Ments törlés előtt!", "Törlés megtagadva", new AlertOptions { CssClass = "glass-dialog" });
             return;
         }
 
-        var confirm = await DialogService.Confirm("Biztosan törölni szeretnéd ezt a csoportot?", "Törlés megerősítése",
+        var confirm = await DialogService.Confirm("Biztosan törölni szeretnéd ezt az üres csoportot?", "Törlés megerősítése",
             new ConfirmOptions() { OkButtonText = "Igen", CancelButtonText = "Nem", CssClass = "glass-dialog" });
 
         if (confirm == true)
         {
             try
             {
-                var success = await GroupRepository.DeleteAsync(groupId);
+                var success = await _groupRepository.DeleteAsync(groupId);
 
                 if (success)
                 {
                     DialogService.Alert("A csoport sikeresen törölve.", "Siker", new AlertOptions() { OkButtonText = "Rendben", CssClass = "glass-dialog" });
 
-                    // UI frissítés
                     await LoadGroups();
-                    if (leftGroupId == groupId) { leftGroupId = 0; leftEmployees.Clear(); }
-                    if (rightGroupId == groupId) { rightGroupId = 0; rightEmployees.Clear(); }
+                    if (leftGroupId == groupId) { leftGroupId = 0; leftEmployees.Clear(); leftGroupLeaderId = null; }
+                    if (rightGroupId == groupId) { rightGroupId = 0; rightEmployees.Clear(); rightGroupLeaderId = null; }
                 }
                 else
                 {
-                    DialogService.Alert("Nem sikerült törölni a csoportot (Repository hiba).", "Hiba", new AlertOptions() { CssClass = "glass-dialog" });
+                    DialogService.Alert("Hiba a törlés közben.", "Hiba", new AlertOptions { CssClass = "glass-dialog" });
                 }
             }
             catch (Exception ex)
             {
-                DialogService.Alert($"Nem sikerült törölni: {ex.Message}", "Hiba", new AlertOptions() { CssClass = "glass-dialog" });
+                DialogService.Alert($"Kivétel történt: {ex.Message}", "Hiba", new AlertOptions { CssClass = "glass-dialog" });
             }
         }
     }
