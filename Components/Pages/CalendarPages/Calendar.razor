@@ -29,6 +29,51 @@
     else
     {
     <article class="content px-4 liquid-calendar-wrapper">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" class="top-dashboard-container" Gap="2rem">
+
+            <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
+                <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Szabadság</RadzenText>
+                <RadzenArcGauge Style="width: 100%; height: 200px;">
+                    <RadzenArcGaugeScale Step="1" Min="0" Max="@totalFreeDays"
+                                         Fill="#00E5FF"
+                                         MinorStep="1" Radius="1"
+                                         TickPosition="GaugeTickPosition.None" Y="0.8" Margin="0">
+                        <RadzenArcGaugeScaleValue Value="@remainingFreeDays" ShowValue="true">
+                            <Template Context="pointer">
+                                <RadzenStack AlignItems="AlignItems.Center" Gap="0" Style="margin-top: -40%;">
+                                    <RadzenText TextStyle="TextStyle.H4" class="gauge-value">
+                                        @pointer.Value <span style="font-size: 0.6em; opacity: 0.7;">/ @totalFreeDays</span>
+                                    </RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption" class="gauge-label">nap</RadzenText>
+                                </RadzenStack>
+                            </Template>
+                        </RadzenArcGaugeScaleValue>
+                    </RadzenArcGaugeScale>
+                </RadzenArcGauge>
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
+                <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Home Office</RadzenText>
+                <RadzenArcGauge Style="width: 100%; height: 200px;">
+                    <RadzenArcGaugeScale Step="1" Min="0" Max="2"
+                                         Fill="#FFB300"
+                                         MinorStep="1" Radius="1"
+                                         TickPosition="GaugeTickPosition.None" Y="0.8" Margin="0">
+                        <RadzenArcGaugeScaleValue Value="1" ShowValue="true">
+                            <Template Context="pointer">
+                                <RadzenStack AlignItems="AlignItems.Center" Gap="0" Style="margin-top: -40%;">
+                                    <RadzenText TextStyle="TextStyle.H4" class="gauge-value">
+                                        @pointer.Value <span style="font-size: 0.6em; opacity: 0.7;">/ 2</span>
+                                    </RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption" class="gauge-label">nap</RadzenText>
+                                </RadzenStack>
+                            </Template>
+                        </RadzenArcGaugeScaleValue>
+                    </RadzenArcGaugeScale>
+                </RadzenArcGauge>
+            </RadzenStack>
+
+        </RadzenStack>
 
         <RadzenStack AlignItems="AlignItems.Center">
         <RadzenSelectBar TValue="int" @bind-Value="@selectedMonth" Change="@OnMonthChanged" Size="ButtonSize.Small">
@@ -65,6 +110,9 @@
     private DateTime currentDate = DateTime.Today;
     private int selectedMonth = DateTime.Today.Month;
 
+    private int remainingFreeDays;
+    private int totalFreeDays;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -72,6 +120,25 @@
             await LoadAppointments();
             isProcessing = false;
             StateHasChanged();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FreeDays();
+    }
+
+    private async Task FreeDays()
+    {
+        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var claimsPrincipal = authState.User;
+        var user = await UserManager.GetUserAsync(claimsPrincipal);
+
+        if (user != null)
+        {
+            int daysTaken = await _appointmentRepository.CalculateFreeDays(user.Id, currentDate.Year);
+            remainingFreeDays = user.TotalFreeDays - daysTaken;
+            totalFreeDays = user.TotalFreeDays;
         }
     }
 
@@ -93,6 +160,7 @@
         var user = authState.User;
         var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
         appointments = await _appointmentRepository.GetAllAsync(userId);
+        await FreeDays();
     }
 
     private void OnSlotRender(SchedulerSlotRenderEventArgs args)

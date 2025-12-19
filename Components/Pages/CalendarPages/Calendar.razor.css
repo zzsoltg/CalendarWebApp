@@ -99,7 +99,7 @@
     justify-content: center;
     border: none;
     gap: 8px;
-    margin-bottom: 20px;
+    margin: 20px 0;
 }
 
     .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button {
@@ -134,77 +134,67 @@
         width: 100%;
     }
 
-
-px rgba(0, 0, 0, 0.1);
-padding: 20px;
-border: 1px solid rgba(255, 255, 255, 0.3);
-transition: transform 0.3s ease;
+.liquid-calendar-wrapper ::deep .top-dashboard-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding-top: 2rem;
 }
 
-.glass-card:hover {
-    background: rgba(255, 255, 255, 0.35);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+/* KÁRTYÁK STÍLUSA */
+.liquid-calendar-wrapper ::deep .dashboard-card {
+    flex: 1;
+    min-width: 300px;
+    max-width: 450px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+    padding: 20px;
+    transition: transform 0.3s ease;
 }
 
-/* Címek stílusa */
-.dashboard-title {
-    color: #233D4D !important;
-    font-weight: 800 !important;
-    text-transform: uppercase;
-    font-size: 1rem !important;
-    margin: 0;
-}
+    .liquid-calendar-wrapper ::deep .dashboard-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
 
-/* Évszám/Hét badge */
-.year-badge {
-    background-color: #233D4D;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
+.liquid-calendar-wrapper ::deep .card-title {
+    color: #ffffff !important;
+    font-family: 'Open Sans', sans-serif;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-/* Csoporttag lista sorai */
-.member-row {
-    padding: 8px;
-    border-radius: 8px;
-    background-color: rgba(255, 255, 255, 0.3);
-    border: 1px solid rgba(255,255,255,0.2);
-    transition: background-color 0.2s;
-}
-
-    .member-row:hover {
-        background-color: rgba(255, 255, 255, 0.6);
-    }
-
-/* Dátum badge a listában */
-.date-badge {
-    color: #233D4D;
+.liquid-calendar-wrapper ::deep .gauge-value {
+    color: #ffffff;
     font-weight: 800;
-    font-size: 0.85rem;
-    background: rgba(255,255,255,0.5);
-    padding: 2px 6px;
-    border-radius: 4px;
+    font-size: 2.5rem;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-/* Görgetősáv testreszabása (Webkit) */
-.custom-scroll::-webkit-scrollbar {
-    width: 6px;
+.liquid-calendar-wrapper ::deep .gauge-label {
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
 }
 
-.custom-scroll::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
+.liquid-calendar-wrapper ::deep .rz-arc-gauge path[fill="none"] {
+    stroke: rgba(255, 255, 255, 0.1);
 }
 
-.custom-scroll::-webkit-scrollbar-thumb {
-    background: rgba(35, 61, 77, 0.3);
-    border-radius: 3px;
+.liquid-calendar-wrapper ::deep .rz-arc-gauge path:not([fill="none"]) {
+    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.4));
 }
-
-    .custom-scroll::-webkit-scrollbar-thumb:hover {
-        background: rgba(35, 61, 77, 0.6);
-    }
 
 @media (max-width: 768px) {
     .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button {
