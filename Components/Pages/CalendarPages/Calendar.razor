@@ -29,13 +29,12 @@
     else
     {
     <article class="content px-4 liquid-calendar-wrapper">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" class="top-dashboard-container" Gap="2rem">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" class="top-dashboard-container" Gap="2rem">
 
             <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
                 <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Szabadság</RadzenText>
                 <RadzenArcGauge Style="width: 100%; height: 200px;">
                     <RadzenArcGaugeScale Step="1" Min="0" Max="@totalFreeDays"
-                                         Fill="#00E5FF"
                                          MinorStep="1" Radius="1"
                                          TickPosition="GaugeTickPosition.None" Y="0.8" Margin="0">
                         <RadzenArcGaugeScaleValue Value="@remainingFreeDays" ShowValue="true">
@@ -56,7 +55,6 @@
                 <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Home Office</RadzenText>
                 <RadzenArcGauge Style="width: 100%; height: 200px;">
                     <RadzenArcGaugeScale Step="1" Min="0" Max="2"
-                                         Fill="#FFB300"
                                          MinorStep="1" Radius="1"
                                          TickPosition="GaugeTickPosition.None" Y="0.8" Margin="0">
                         <RadzenArcGaugeScaleValue Value="1" ShowValue="true">
