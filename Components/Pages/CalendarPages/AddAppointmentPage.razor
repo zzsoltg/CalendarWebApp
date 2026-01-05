@@ -10,6 +10,7 @@
 
 <RadzenTemplateForm TItem="Appointment" Data="@model" Submit=@OnSubmit>
     <RadzenText>Hátralévő szabadnapok: @remainingFreeDays</RadzenText>
+    <RadzenText>Hátralévő Home Office napok: @remainingHomeOfficeDays</RadzenText>
     <RadzenStack Gap="1rem">
 
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
@@ -57,8 +58,11 @@
     public DateTime Start { get; set; }
     public Appointment model = new Appointment();
 
+    private const int weeklyHomeOfficeLimit = 2;
+
     private readonly string[] typeOptions = new[] { "Szabadság", "HomeOffice", "Képzés", "Táppénz" };
     private int remainingFreeDays;
+    private int remainingHomeOfficeDays;
 
     protected override async Task OnInitializedAsync()
     {
@@ -70,7 +74,9 @@
         {
             model.UserId = user.Id;
             int daysTaken = await _appointmentRepository.CalculateFreeDays(user.Id, Start.Year);
+            int hoDaysTaken = await _appointmentRepository.GetWeeklyHomeOfficeCount(user.Id, Start.Date);
             remainingFreeDays = user.TotalFreeDays - daysTaken;
+            remainingHomeOfficeDays = weeklyHomeOfficeLimit - hoDaysTaken;
         }
 
     }
@@ -90,6 +96,22 @@
             if (requestedDays > remainingFreeDays)
             {
                 var result = await DialogService.Confirm("Nincs elég szabadnapod a szabadság kivételéhez!", "Túl kevés szabadnap",
+                    new ConfirmOptions() { OkButtonText = "Módosítás", CssClass = "glass-dialog" });
+                return;
+            }
+            if (model.Start > model.End)
+            {
+                var result = await DialogService.Confirm("Az esmemény nem kezdődhet később, mint ahogy befejeződik!", "Hiba a mentéskor",
+                    new ConfirmOptions() { OkButtonText = "Módosítás", CssClass = "glass-dialog" });
+                return;
+            }
+        }
+        if (model.Type == "HomeOffice")
+        {
+            int requestedDays = (model.End.Date - model.Start.Date).Days + 1;
+            if (requestedDays > remainingHomeOfficeDays)
+            {
+                var result = await DialogService.Confirm("Nincs elég Home Office napod a kivételhez!", "Túl kevés Home Office",
                     new ConfirmOptions() { OkButtonText = "Módosítás", CssClass = "glass-dialog" });
                 return;
             }

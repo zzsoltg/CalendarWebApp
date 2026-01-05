@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
+@using System.Globalization
 @using CalendarWebApp.Data
 @attribute [Authorize]
 
@@ -15,7 +16,6 @@
 @inject Radzen.TooltipService TooltipService
 @inject AuthenticationStateProvider _AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
-@inject ApplicationDbContext DbContext
 
 <PageTitle>Naptár - G-Call</PageTitle>
 
@@ -32,7 +32,10 @@
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" class="top-dashboard-container" Gap="2rem">
 
             <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
-                <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Szabadság</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Szabadság</RadzenText>
+                    <RadzenText TextStyle="TextStyle.DisplayH6" class="gauge-label"><span style="font-size: 0.9em; opacity: 0.7;">@currentDate.Year</span></RadzenText>
+                </RadzenStack>
                 <RadzenArcGauge Style="width: 100%; height: 200px;">
                     <RadzenArcGaugeScale Step="1" Min="0" Max="@totalFreeDays"
                                          MinorStep="1" Radius="1"
@@ -52,16 +55,19 @@
             </RadzenStack>
 
             <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
-                <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Home Office</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Home Office</RadzenText>
+                    <RadzenText TextStyle="TextStyle.DisplayH6" class="gauge-label"><span style="font-size: 0.9em; opacity: 0.7;">@weekNumber. hét</span></RadzenText>
+                </RadzenStack>
                 <RadzenArcGauge Style="width: 100%; height: 200px;">
-                    <RadzenArcGaugeScale Step="1" Min="0" Max="2"
+                    <RadzenArcGaugeScale Step="1" Min="0" Max="@weeklyHomeOfficeLimit"
                                          MinorStep="1" Radius="1"
                                          TickPosition="GaugeTickPosition.None" Y="0.8" Margin="0">
-                        <RadzenArcGaugeScaleValue Value="1" ShowValue="true">
+                        <RadzenArcGaugeScaleValue Value="@remainingHomeOfficeDays" ShowValue="true">
                             <Template Context="pointer">
                                 <RadzenStack AlignItems="AlignItems.Center" Gap="0" Style="margin-top: -40%;">
                                     <RadzenText TextStyle="TextStyle.H4" class="gauge-value">
-                                        @pointer.Value <span style="font-size: 0.6em; opacity: 0.7;">/ 2</span>
+                                        @pointer.Value <span style="font-size: 0.6em; opacity: 0.7;">/ @weeklyHomeOfficeLimit</span>
                                     </RadzenText>
                                     <RadzenText TextStyle="TextStyle.Caption" class="gauge-label">nap</RadzenText>
                                 </RadzenStack>
@@ -69,6 +75,14 @@
                         </RadzenArcGaugeScaleValue>
                     </RadzenArcGaugeScale>
                 </RadzenArcGauge>
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">csoport</RadzenText>
+                    <RadzenText TextStyle="TextStyle.DisplayH6" class="gauge-label"><span style="font-size: 0.8em; opacity: 0.7;">Webfejlesztés</span></RadzenText>
+                </RadzenStack>
+                <RadzenText>Ez itt a csoportod tagjainak helye</RadzenText>
             </RadzenStack>
 
         </RadzenStack>
@@ -107,23 +121,24 @@
     private IEnumerable<MyAppointment> appointments = new List<MyAppointment>();
     private DateTime currentDate = DateTime.Today;
     private int selectedMonth = DateTime.Today.Month;
-
+    private const int weeklyHomeOfficeLimit = 2;
+    private int weekNumber;
     private int remainingFreeDays;
     private int totalFreeDays;
+    private int remainingHomeOfficeDays;
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            weekNumber = ISOWeek.GetWeekOfYear(currentDate);
             await LoadAppointments();
+            await FreeDays();
+            await HomeOfficeDays();
             isProcessing = false;
             StateHasChanged();
         }
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await FreeDays();
     }
 
     private async Task FreeDays()
@@ -137,6 +152,19 @@
             int daysTaken = await _appointmentRepository.CalculateFreeDays(user.Id, currentDate.Year);
             remainingFreeDays = user.TotalFreeDays - daysTaken;
             totalFreeDays = user.TotalFreeDays;
+        }
+    }
+
+    private async Task HomeOfficeDays()
+    {
+        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var claimsPrincipal = authState.User;
+        var user = await UserManager.GetUserAsync(claimsPrincipal);
+
+        if (user != null)
+        {
+            int hoDaysTaken = await _appointmentRepository.GetWeeklyHomeOfficeCount(user.Id, DateTime.Today);
+            remainingHomeOfficeDays = weeklyHomeOfficeLimit - hoDaysTaken;
         }
     }
 
@@ -159,6 +187,7 @@
         var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
         appointments = await _appointmentRepository.GetAllAsync(userId);
         await FreeDays();
+        await HomeOfficeDays();
     }
 
     private void OnSlotRender(SchedulerSlotRenderEventArgs args)

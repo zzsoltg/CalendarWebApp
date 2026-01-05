@@ -91,5 +91,18 @@ namespace CalendarWebApp.Repository
             }
             return obj;
         }
+
+        public async Task<int> GetWeeklyHomeOfficeCount(string userId, DateTime targetDate)
+        {
+            int diff = (7 + (targetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
+            var monday = targetDate.AddDays(-1 * diff).Date;
+            var sunday = monday.AddDays(6).Date;
+
+            return await _db.Appointment.CountAsync(x =>
+                x.UserId == userId &&
+                x.Type == "HomeOffice" &&
+                x.Start.Date >= monday &&
+                x.Start.Date <= sunday);
+        }
     }
 }
