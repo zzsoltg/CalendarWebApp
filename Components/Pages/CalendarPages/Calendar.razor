@@ -16,6 +16,7 @@
 @inject Radzen.TooltipService TooltipService
 @inject AuthenticationStateProvider _AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
+@inject IGroupRepository _groupRepository
 
 <PageTitle>Naptár - G-Call</PageTitle>
 
@@ -29,7 +30,7 @@
     else
     {
     <article class="content px-4 liquid-calendar-wrapper">
-        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" class="top-dashboard-container" Gap="2rem">
+        <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.Center" class="top-dashboard-container" Gap="2rem">
 
             <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
                 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
@@ -77,12 +78,35 @@
                 </RadzenArcGauge>
             </RadzenStack>
 
-            <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
+            <RadzenStack Orientation="Orientation.Vertical" Gap="1rem" class="dashboard-card">
                 <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween">
-                    <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">csoport</RadzenText>
-                    <RadzenText TextStyle="TextStyle.DisplayH6" class="gauge-label"><span style="font-size: 0.8em; opacity: 0.7;">Webfejlesztés</span></RadzenText>
+                    <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">csoportom</RadzenText>
+                    <RadzenText TextStyle="TextStyle.DisplayH6" class="gauge-label"><span style="font-size: 0.8em; opacity: 0.7;">@groupName</span></RadzenText>
                 </RadzenStack>
-                <RadzenText>Ez itt a csoportod tagjainak helye</RadzenText>
+                <RadzenStack Gap="0.5rem" Style="padding-right: 5px;">
+                    <RadzenText>Szabadságok:</RadzenText>
+                    @if (groupMembers != null && groupMembers.Any())
+                    {
+                        @foreach (var member in groupMembers)
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="10px">
+                                <RadzenIcon Icon="account_circle" Style="font-size: 1.5rem; color: var(--rz-primary);" />
+
+                                <RadzenStack Gap="0">
+                                    <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0; font-weight: 500;">
+                                        <span style="font-weight: 800">@member.Name:</span> 01.02 - 01.03
+                                    </RadzenText>
+                                </RadzenStack>
+                            </RadzenStack>
+                        }
+                    }
+                    else
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2" Style="color: gray; font-style: italic;">
+                            Nincsenek megjeleníthető tagok.
+                        </RadzenText>
+                    }
+                </RadzenStack>
             </RadzenStack>
 
         </RadzenStack>
@@ -126,7 +150,8 @@
     private int remainingFreeDays;
     private int totalFreeDays;
     private int remainingHomeOfficeDays;
-
+    private string groupName;
+    private List<ApplicationUser> groupMembers = new List<ApplicationUser>();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -136,8 +161,31 @@
             await LoadAppointments();
             await FreeDays();
             await HomeOfficeDays();
+            await LoadGroup();
             isProcessing = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task LoadGroup()
+    {
+        var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+
+        if (user != null && user.HierarchicalGroupId != null)
+        {
+            var group = await _groupRepository.GetByIdAsync(user.HierarchicalGroupId);
+            if (group != null)
+            {
+                groupName = group.Name;
+                groupMembers = UserManager.Users
+            .Where(u => u.HierarchicalGroupId == user.HierarchicalGroupId)
+            .ToList();
+            }
+        }
+        else
+        {
+            groupName = "Nincs csoport";
         }
     }
 
