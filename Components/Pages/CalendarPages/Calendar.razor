@@ -21,14 +21,14 @@
 <PageTitle>Naptár - G-Call</PageTitle>
 
 
-    @if (isProcessing)
-    {
-        <div class="position-absolute w-75 h-75 d-flex flex-column align-items-center bg-white justify-content-center">
-            <img src="/img/loading.gif" alt="loading" />
-        </div>
-    }
-    else
-    {
+@if (isProcessing)
+{
+    <div class="d-flex flex-column align-items-center justify-content-center" style="height: 200px;">
+        <img src="/img/loading.gif" alt="loading" style="width: 50px;" />
+    </div>
+}
+else
+{
     <article class="content px-4 liquid-calendar-wrapper">
         <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.Center" class="top-dashboard-container" Gap="2rem">
 
@@ -112,31 +112,31 @@
         </RadzenStack>
 
         <RadzenStack AlignItems="AlignItems.Center">
-        <RadzenSelectBar TValue="int" @bind-Value="@selectedMonth" Change="@OnMonthChanged" Size="ButtonSize.Small">
-            <Items>
-                <RadzenSelectBarItem Value="1" Text="Január"/>
-                <RadzenSelectBarItem Value="2" Text="Február" />
-                <RadzenSelectBarItem Value="3" Text="Március" />
-                <RadzenSelectBarItem Value="4" Text="Április" />
-                <RadzenSelectBarItem Value="5" Text="Május" />
-                <RadzenSelectBarItem Value="6" Text="Június" />
-                <RadzenSelectBarItem Value="7" Text="Július"/>
-                <RadzenSelectBarItem Value="8" Text="Augusztus" />
-                <RadzenSelectBarItem Value="9" Text="Szeptember" />
-                <RadzenSelectBarItem Value="10" Text="Október" />
-                <RadzenSelectBarItem Value="11" Text="November" />
-                <RadzenSelectBarItem Value="12" Text="December" />
-            </Items>
-        </RadzenSelectBar>
-       </RadzenStack>
+            <RadzenSelectBar TValue="int" @bind-Value="@selectedMonth" Change="@OnMonthChanged" Size="ButtonSize.Small">
+                <Items>
+                    <RadzenSelectBarItem Value="1" Text="Január" />
+                    <RadzenSelectBarItem Value="2" Text="Február" />
+                    <RadzenSelectBarItem Value="3" Text="Március" />
+                    <RadzenSelectBarItem Value="4" Text="Április" />
+                    <RadzenSelectBarItem Value="5" Text="Május" />
+                    <RadzenSelectBarItem Value="6" Text="Június" />
+                    <RadzenSelectBarItem Value="7" Text="Július" />
+                    <RadzenSelectBarItem Value="8" Text="Augusztus" />
+                    <RadzenSelectBarItem Value="9" Text="Szeptember" />
+                    <RadzenSelectBarItem Value="10" Text="Október" />
+                    <RadzenSelectBarItem Value="11" Text="November" />
+                    <RadzenSelectBarItem Value="12" Text="December" />
+                </Items>
+            </RadzenSelectBar>
+        </RadzenStack>
         <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender Date="@currentDate" DateChanged="@OnDateChanged" TItem="MyAppointment" Data=@appointments StartProperty="Start" EndProperty="End" ShowHeader=true
                          TextProperty="Type" SelectedIndex="0" AppointmentMouseEnter=@OnAppointmentMouseEnter AppointmentMouseLeave=@OnAppointmentMouseLeave
                          SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender
                          AppointmentMove=@OnAppointmentMove>
             <RadzenMonthView />
         </RadzenScheduler>
-     </article>
-    }
+    </article>
+}
 
 @code {
     private RadzenScheduler<MyAppointment> scheduler;
@@ -434,8 +434,8 @@
                 </RadzenText>
             </RadzenStack>
 
-            @if (args.Data.Description != null)
-            {
+        @if (args.Data.Description != null)
+        {
                 <RadzenStack Orientation="Orientation.Vertical" Style="align-items:flex-start; margin-top: 8px;">
                     <RadzenText TextStyle="TextStyle.Body1" Style="color: var(--rz-tooltip-color); width: 64px;">
                         <strong>Description</strong>
@@ -444,7 +444,7 @@
                         @FormatDescription(args.Data.Description)
                     </div>
                 </RadzenStack>
-            }
+        }
         </RadzenStack>, new TooltipOptions { Position = position, Duration = null });
     }
 
