@@ -6,21 +6,21 @@ namespace CalendarWebApp.Repository
 {
     public class OrganisationRepository : IOrganisationRepository
     {
-        private readonly ApplicationDbContext _context;
-        public OrganisationRepository(ApplicationDbContext context)
+        private readonly ApplicationDbContext _db;
+        public OrganisationRepository(ApplicationDbContext db)
         {
-            _context = context;
+            _db = db;
         }
 
         public async Task CreateAsync(Organisation organisation)
         {
-            _context.Organisations.Add(organisation);
-            await _context.SaveChangesAsync();
+            _db.Organisations.Add(organisation);
+            await _db.SaveChangesAsync();
         }
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var organisation = await _context.Organisations
+            var organisation = await _db.Organisations
                 .Include(o => o.Groups)
                 .FirstOrDefaultAsync(o => o.Id == id);
 
@@ -31,14 +31,14 @@ namespace CalendarWebApp.Repository
                 return false;
             }
 
-            _context.Organisations.Remove(organisation);
-            await _context.SaveChangesAsync();
+            _db.Organisations.Remove(organisation);
+            await _db.SaveChangesAsync();
             return true;
         }
 
         public async Task<List<Organisation>> GetAllAsync()
         {
-            return await _context.Organisations
+            return await _db.Organisations
                 .Include(o => o.Groups)
                 .ThenInclude(g => g.GroupLeader)
                 .OrderBy(o => o.Name)
@@ -47,16 +47,16 @@ namespace CalendarWebApp.Repository
 
         public async Task<Organisation?> GetByIdAsync(int id)
         {
-            return await _context.Organisations.FindAsync(id);
+            return await _db.Organisations.FindAsync(id);
         }
 
         public async Task UpdateAsync(Organisation organisation)
         {
-            var existing = await _context.Organisations.FindAsync(organisation.Id);
+            var existing = await _db.Organisations.FindAsync(organisation.Id);
             if (existing != null)
             {
                 existing.Name = organisation.Name;
-                await _context.SaveChangesAsync();
+                await _db.SaveChangesAsync();
             }
         }
     }

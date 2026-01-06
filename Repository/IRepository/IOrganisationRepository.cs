@@ -4,10 +4,10 @@ namespace CalendarWebApp.Repository.IRepository
 {
     public interface IOrganisationRepository
     {
-        Task<List<Organisation>> GetAllAsync();
-        Task<Organisation?> GetByIdAsync(int id);
-        Task CreateAsync(Organisation organisation);
-        Task UpdateAsync(Organisation organisation);
-        Task<bool> DeleteAsync(int id);
+        public Task<List<Organisation>> GetAllAsync();
+        public Task<Organisation?> GetByIdAsync(int id);
+        public Task CreateAsync(Organisation organisation);
+        public Task UpdateAsync(Organisation organisation);
+        public Task<bool> DeleteAsync(int id);
     }
 }

@@ -16,9 +16,8 @@
 @inject IAppointmentRepository _appointmentRepository
 @inject UserManager<ApplicationUser> UserManager
 
-@inject IOrganisationRepository OrganisationRepository
-@inject IGroupRepository GroupRepository
-@inject ApplicationDbContext DbContext
+@inject IOrganisationRepository _organisationRepository
+@inject IGroupRepository _groupRepository
 
 @inject DialogService DialogService
 
@@ -412,7 +411,7 @@
 
         if (isLogical)
         {
-            var logicalGroups = await GroupRepository.GetAllLogicalAsync();
+            var logicalGroups = await _groupRepository.GetAllLogicalAsync();
             if (!string.IsNullOrEmpty(search))
             {
                 logicalGroups = logicalGroups
@@ -436,7 +435,7 @@
         }
         else
         {
-            var allOrganisations = await OrganisationRepository.GetAllAsync();
+            var allOrganisations = await _organisationRepository.GetAllAsync();
             if (!string.IsNullOrEmpty(search))
             {
                 allOrganisations = allOrganisations.Where(org =>
@@ -533,25 +532,7 @@
 
     private async Task FilterEmployees()
     {
-        var query = DbContext.Users
-            .Include(u => u.HierarchicalGroup)
-            .ThenInclude(g => g.Organisation)
-            .Include(u => u.LogicalGroups)
-            .AsQueryable();
-
-        if (values != null && values.Any())
-        {
-            if (isLogical)
-            {
-                query = query.Where(u => u.LogicalGroups.Any(lg => values.Contains(lg.Name)));
-            }
-            else
-            {
-                query = query.Where(u => values.Contains(u.HierarchicalGroup.Name));
-            }
-        }
-
-        employees = await query.ToListAsync();
+        employees = (await _groupRepository.GetMembersByGroupNamesAsync(values, isLogical)).ToList();
         selectedEmployees = null;
         StateHasChanged();
     }
