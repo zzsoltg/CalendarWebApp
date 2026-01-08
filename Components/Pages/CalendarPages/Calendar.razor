@@ -93,8 +93,20 @@ else
                                 <RadzenIcon Icon="account_circle" Style="font-size: 1.5rem; color: var(--rz-primary);" />
 
                                 <RadzenStack Gap="0">
-                                    <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0; font-weight: 500;">
-                                        <span style="font-weight: 800">@member.Name:</span> 01.02 - 01.03
+                                    <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0;">
+                                        <span style="font-weight: 800">@member.Name: </span>
+                                        @if (memberVacations.ContainsKey(member.Id))
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin-left: 0.1rem; color: #d32f2f; font-weight: 600;">
+                                                @memberVacations[member.Id]
+                                            </RadzenText>
+                                        }
+                                        else
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin-left: 0.1rem; color: gray; font-style: italic;">
+                                                nincs
+                                            </RadzenText>
+                                        }
                                     </RadzenText>
                                 </RadzenStack>
                             </RadzenStack>
@@ -152,6 +164,7 @@ else
     private int remainingHomeOfficeDays;
     private string groupName;
     private List<ApplicationUser> groupMembers = new List<ApplicationUser>();
+    private Dictionary<string, string> memberVacations = new Dictionary<string, string>();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -179,13 +192,74 @@ else
             {
                 groupName = group.Name;
                 groupMembers = UserManager.Users
-            .Where(u => u.HierarchicalGroupId == user.HierarchicalGroupId)
-            .ToList();
+                    .Where(u => u.HierarchicalGroupId == user.HierarchicalGroupId)
+                    .ToList();
+
+                await CalculateMemberVacations(groupMembers);
             }
         }
         else
         {
             groupName = "Nincs csoport";
+        }
+    }
+
+    private async Task CalculateMemberVacations(List<ApplicationUser> members)
+    {
+        memberVacations.Clear();
+
+        var userIds = members.Select(u => u.Id).ToList();
+        var allApps = await _appointmentRepository.GetByUsersAsync(userIds);
+
+        foreach (var member in members)
+        {
+            var userVacations = allApps
+                .Where(a => a.UserId == member.Id &&
+                            a.Type == "Szabadság" &&
+                            a.End.Date >= DateTime.Today)
+                .ToList();
+
+            if (!userVacations.Any())
+            {
+                continue;
+            }
+
+            HashSet<DateTime> vacationDays = new HashSet<DateTime>();
+            foreach (var app in userVacations)
+            {
+                var start = app.Start.Date < DateTime.Today ? DateTime.Today : app.Start.Date;
+                var end = app.End.Date;
+
+                for (var dt = start; dt <= end; dt = dt.AddDays(1))
+                {
+                    vacationDays.Add(dt);
+                }
+            }
+
+            if (vacationDays.Count == 0)
+            {
+                continue;
+            }
+
+            var firstDay = vacationDays.Min();
+            var lastDay = firstDay;
+
+            while (vacationDays.Contains(lastDay.AddDays(1)))
+            {
+                lastDay = lastDay.AddDays(1);
+            }
+
+            string dateString;
+            if (firstDay == lastDay)
+            {
+                dateString = firstDay.ToString("MM. dd.");
+            }
+            else
+            {
+                dateString = $"{firstDay.ToString("MM. dd.")} - {lastDay.ToString("MM. dd.")}";
+            }
+
+            memberVacations[member.Id] = dateString;
         }
     }
 
@@ -236,6 +310,7 @@ else
         appointments = await _appointmentRepository.GetAllAsync(userId);
         await FreeDays();
         await HomeOfficeDays();
+        await LoadGroup();
     }
 
     private void OnSlotRender(SchedulerSlotRenderEventArgs args)
