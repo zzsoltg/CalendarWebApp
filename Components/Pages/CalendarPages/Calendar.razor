@@ -18,18 +18,22 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IGroupRepository _groupRepository
 
-<PageTitle>Naptár - G-Call</PageTitle>
+<PageTitle>Naptár - GriffSync</PageTitle>
 
 
 @if (isProcessing)
 {
-    <div class="d-flex flex-column align-items-center justify-content-center" style="height: 200px;">
-        <img src="/img/loading.gif" alt="loading" style="width: 50px;" />
+    <div class="d-flex flex-column align-items-center justify-content-center" style="height: 400px;">
+        <img src="/img/loading.gif" alt="loading" style="width: 200px;" />
     </div>
 }
 else
 {
     <article class="content px-4 liquid-calendar-wrapper">
+        <RadzenStack AlignItems="AlignItems.Center">
+            <RadzenText TextStyle="TextStyle.DisplayH5" class="card-title">Üdvözöljük, @name!</RadzenText>
+            <RadzenText TextStyle="TextStyle.DisplayH6" class="gauge-label">Kellemes pihenést kívánunk!</RadzenText>
+        </RadzenStack>
         <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.Center" class="top-dashboard-container" Gap="2rem">
 
             <RadzenStack Orientation="Orientation.Vertical" class="dashboard-card">
@@ -84,26 +88,26 @@ else
                     <RadzenText TextStyle="TextStyle.DisplayH6" class="gauge-label"><span style="font-size: 0.8em; opacity: 0.7;">@groupName</span></RadzenText>
                 </RadzenStack>
                 <RadzenStack Gap="0.5rem" Style="padding-right: 5px;">
-                    <RadzenText>Szabadságok:</RadzenText>
+                    <RadzenText style="color: rgba(255, 255, 255, 0.7);">Szabadságok:</RadzenText>
                     @if (groupMembers != null && groupMembers.Any())
                     {
                         @foreach (var member in groupMembers)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="10px">
-                                <RadzenIcon Icon="account_circle" Style="font-size: 1.5rem; color: var(--rz-primary);" />
+                                <RadzenIcon Icon="account_circle" Style="font-size: 1.5rem; color: rgba(255, 255, 255, 0.7);" />
 
                                 <RadzenStack Gap="0">
                                     <RadzenText TextStyle="TextStyle.Body2" Style="margin: 0;">
-                                        <span style="font-weight: 800">@member.Name: </span>
+                                        <span style="font-weight: 800; color: rgba(255, 255, 255, 0.7);">@member.Name: </span>
                                         @if (memberVacations.ContainsKey(member.Id))
                                         {
-                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin-left: 0.1rem; color: #d32f2f; font-weight: 600;">
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin-left: 0.1rem; color: rgba(255, 255, 255, 0.5); font-weight: 600;">
                                                 @memberVacations[member.Id]
                                             </RadzenText>
                                         }
                                         else
                                         {
-                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin-left: 0.1rem; color: gray; font-style: italic;">
+                                            <RadzenText TextStyle="TextStyle.Caption" Style="margin-left: 0.1rem; color: rgba(255, 255, 255, 0.5); font-style: italic;">
                                                 nincs
                                             </RadzenText>
                                         }
@@ -163,6 +167,7 @@ else
     private int totalFreeDays;
     private int remainingHomeOfficeDays;
     private string groupName;
+    private string name;
     private List<ApplicationUser> groupMembers = new List<ApplicationUser>();
     private Dictionary<string, string> memberVacations = new Dictionary<string, string>();
 
@@ -184,6 +189,7 @@ else
     {
         var authState = await _AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = await UserManager.GetUserAsync(authState.User);
+        name = user.Name;
 
         if (user != null && user.HierarchicalGroupId != null)
         {

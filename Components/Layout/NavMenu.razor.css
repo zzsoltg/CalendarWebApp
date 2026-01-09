@@ -9,7 +9,7 @@
     padding: 0.5rem 1rem;
     font-family: 'Open Sans', sans-serif;
     font-weight: 900;
-    color: #233D4D;
+    --bs-navbar-color: rgba(255, 255, 255, 0.7);
     min-height: 7rem;
     height: auto;
     position: relative;
@@ -17,8 +17,6 @@
 }
 
     .glass-nav ::deep .nav-link {
-        color: #233D4D;
-        font-weight: 900;
         transition: all 0.2s ease-in-out;
         border-radius: 8px;
     }
@@ -30,7 +28,7 @@
         }
 
         .glass-nav ::deep .nav-link.active {
-            color: black;
+            color: white;
             transform: scale(1.1);
         }
 

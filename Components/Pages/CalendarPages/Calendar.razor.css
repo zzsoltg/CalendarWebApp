@@ -1,5 +1,5 @@
 ﻿.liquid-calendar-wrapper ::deep .rz-scheduler {
-    color: #233D4D;
+    color: rgba(255, 255, 255, 0.7);
     font-family: 'Open Sans', sans-serif;
     height: 650px;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
@@ -7,6 +7,10 @@
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
+    --rz-scheduler-border-color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 5rem;
+    margin-left: 2rem;
+    margin-right: 2rem;
 }
 
 .liquid-calendar-wrapper ::deep .rz-scheduler-nav {
@@ -35,7 +39,7 @@
 }
 
 .liquid-calendar-wrapper ::deep .rz-scheduler-nav-title {
-    color: #233D4D;
+    color: rgba(255, 255, 255, 0.7);
     font-weight: 900;
     font-size: 1.5rem;
     text-transform: uppercase;
@@ -43,12 +47,14 @@
 
 .liquid-calendar-wrapper ::deep .rz-view-header {
     background-color: transparent;
-    color: #233D4D;
+    color: rgba(255, 255, 255, 0.7);
+    border-block-start-color: rgba(255, 255, 255, 0.4);
+    border-block-end-color: rgba(255, 255, 255, 0.4);
+    
 }
 
     .liquid-calendar-wrapper ::deep .rz-view-header th {
         background-color: transparent;
-        color: #233D4D;
         font-weight: 900;
         text-transform: uppercase;
         font-size: 0.85rem;
@@ -66,9 +72,13 @@
     background-color: transparent;
 }
 
+:root {
+   
+}
 
 .liquid-calendar-wrapper ::deep .rz-slot {
     transition: all 0.3s ease;
+    --rz-scheduler-border-color: rgba(255, 255, 255, 0.4);
 }
 
     .liquid-calendar-wrapper ::deep .rz-slot:hover {
@@ -105,7 +115,7 @@
     .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button {
         border-radius: 8px;
         border: 0.1px solid rgba(255, 255, 255, 0.3);
-        color: #233D4D;
+        color: rgba(255, 255, 255, 0.7);
         font-weight: 900;
         font-size: 0.9rem;
         padding: 8px 16px;
@@ -119,7 +129,8 @@
         .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button:hover:not(.rz-state-active) {
             background: rgba(255, 255, 255, 0.4);
             box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.6);
-            transform: none;
+            color: rgba(255, 255, 255);
+            transform: translateY(-5px);
             cursor: pointer;
         }
 
@@ -143,12 +154,12 @@
     padding-top: 2rem;
 }
 
-/* KÁRTYÁK STÍLUSA */
+
 .liquid-calendar-wrapper ::deep .dashboard-card {
     flex: 1;
     min-width: 300px;
     max-width: 450px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-radius: 20px;
@@ -160,46 +171,60 @@
 }
 
     .liquid-calendar-wrapper ::deep .dashboard-card:hover {
+        transition: all 0.3s ease;
         transform: translateY(-5px);
         border-color: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.4);
+        box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.6);
     }
 
-.liquid-calendar-wrapper ::deep .card-title {
-    color: #233D4D;
-    font-family: 'Open Sans', sans-serif;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 0;
+    .liquid-calendar-wrapper ::deep .dashboard-card:hover .card-title {
+        color: white;
+    }
 
-}
+        .liquid-calendar-wrapper ::deep .card-title {
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'Open Sans', sans-serif;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0;
+        }
 
 .liquid-calendar-wrapper ::deep .gauge-value {
-    color: #233D4D;
+    color: rgba(255, 255, 255, 0.7);
     font-weight: 800;
     font-size: 2.5rem;
     text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-.liquid-calendar-wrapper ::deep .gauge-label {
-    color: rgba(0, 0, 0, 0.6);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
+        .liquid-calendar-wrapper ::deep .gauge-label {
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+.liquid-calendar-wrapper ::deep .rz-arc-gauge-scale {
+    fill: rgba(255, 255, 255, 0.4);
 }
 
-.liquid-calendar-wrapper ::deep .rz-arc-gauge path[fill="none"] {
-    stroke: rgba(255, 255, 255, 0.1);
+path {
+    color: black;
 }
 
-.liquid-calendar-wrapper ::deep .rz-arc-gauge path:not([fill="none"]) {
-    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.4));
+.liquid-calendar-wrapper ::deep .rz-arc-gauge {
+    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.3));
 }
 
-@media (max-width: 768px) {
-    .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button {
-        font-size: 0.8rem;
-        padding: 5px 10px;
-        flex-basis: 30%;
-    }
-}
+        @media (max-width: 768px) {
+            .liquid-calendar-wrapper ::depp .rz-scheduler {
+                margin-right: 0;
+                margin-left: 0;
+            }
+            .liquid-calendar-wrapper ::deep .rz-selectbar .rz-button {
+                font-size: 0.8rem;
+                padding: 5px 10px;
+                flex-basis: 30%;
+            }
+        }

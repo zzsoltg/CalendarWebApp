@@ -21,15 +21,17 @@
 
 @inject DialogService DialogService
 
-<div class="liquid-calendar-wrapper rz-p-4">
+<PageTitle>Csoportok - GriffSync</PageTitle>
 
+<div class="liquid-calendar-wrapper rz-p-4">
+    <RadzenText TextStyle="TextStyle.H5" TextAlign="TextAlign.Center" class="section-title rz-mb-12">Keresés felhasználókra csoportok és szervezetek alapján</RadzenText>
     <div class="glass-section rz-mb-4">
-        <RadzenText TextStyle="TextStyle.H5" class="section-title">Szűrés csoportra</RadzenText>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-3" Wrap="FlexWrap.Wrap">
+        <RadzenText TextStyle="TextStyle.H5" class="section-title rz-mb-4">Szűrés csoportra</RadzenText>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                <RadzenLabel Text="Hierarchikus" Style="font-weight: 600; color: #233D4D;" />
+                <RadzenLabel Text="Hierarchikus" class="switch-label" />
                 <RadzenSwitch @bind-Value=@isLogical Change="@(async (bool val) => { await Populate(); await FilterEmployees(); })" InputAttributes="@(new Dictionary<string, object>() { { "aria-label", "Switch value" } })" />
-                <RadzenLabel Text="Logikai" Style="font-weight: 600; color: #233D4D;" />
+                <RadzenLabel Text="Logikai" class="switch-label" />
             </RadzenStack>
             <RadzenDropDown @ref=dd
                             @bind-Value=@values
@@ -102,66 +104,81 @@
                 </AuthorizeView>
             </div>
         </RadzenStack>
+    </div>
 
-        <RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true"
-                        FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                        AllowPaging="true" PageSize="4" AllowSorting="true" Data="@employees"
-                        SelectionMode="DataGridSelectionMode.Multiple"
-                        Value="@selectedEmployees"
-                        ValueChanged="@(async (IList<ApplicationUser> args) => { selectedEmployees = args; await LoadAppointments(); })"
-                        class="glass-grid">
-            <Columns>
-                <RadzenDataGridColumn Width="50px" Sortable="false" Filterable="false">
-                    <HeaderTemplate>
-                        <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?"
-                                        Value="@(selectedEmployees == null || selectedEmployees?.Any() != true ? false : !employees.All(i => selectedEmployees.Contains(i)) ? null : employees.Any(i => selectedEmployees.Contains(i)))"
-                                        Change="@(async args => { selectedEmployees = args == true ? employees.ToList() : null; await LoadAppointments(); })" />
-                    </HeaderTemplate>
-                    <Template Context="data">
-                        <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedEmployees != null && selectedEmployees.Contains(data))"
-                                        TValue="bool" Change=@(args => { if (!allowRowSelectOnRowClick) { grid.SelectRow(data); } }) />
+    <RadzenDataGrid @ref="grid" AllowRowSelectOnRowClick="true" AllowFiltering="true"
+                    FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    AllowPaging="true" PageSize="4" AllowSorting="true" Data="@employees"
+                    SelectionMode="DataGridSelectionMode.Multiple"
+                    Value="@selectedEmployees"
+                    ValueChanged="@(async (IList<ApplicationUser> args) => { selectedEmployees = args; await LoadAppointments(); })"
+                    class="glass-grid rz-mb-4">
+        <Columns>
+            <RadzenDataGridColumn Width="50px" Sortable="false" Filterable="false">
+                <HeaderTemplate>
+                    <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?"
+                                    Value="@(selectedEmployees == null || selectedEmployees?.Any() != true ? false : !employees.All(i => selectedEmployees.Contains(i)) ? null : employees.Any(i => selectedEmployees.Contains(i)))"
+                                    Change="@(async args => { selectedEmployees = args == true ? employees.ToList() : null; await LoadAppointments(); })" />
+                </HeaderTemplate>
+                <Template Context="data">
+                    <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedEmployees != null && selectedEmployees.Contains(data))"
+                                    TValue="bool" Change=@(args => { if (!allowRowSelectOnRowClick) { grid.SelectRow(data); } }) />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="@nameof(ApplicationUser.Name)" Title="Név" />
+            <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
+            @if (!isLogical)
+            {
+                <RadzenDataGridColumn Title="Szervezet">
+                    <Template Context="user">
+                        @user.HierarchicalGroup?.Organisation?.Name
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn Property="@nameof(ApplicationUser.Name)" Title="Név" />
-                <RadzenDataGridColumn Property="@nameof(ApplicationUser.UserName)" Title="Email" />
-                @if (!isLogical)
-                {
-                    <RadzenDataGridColumn Title="Szervezet">
-                        <Template Context="user">
-                            @user.HierarchicalGroup?.Organisation?.Name
-                        </Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn Title="Csoport">
-                        <Template Context="user">
-                            @user.HierarchicalGroup?.Name
-                            <RadzenText Style="font-size: 0.75rem; color: #6c757d; margin: 0;">Csoportvezető: @user.HierarchicalGroup?.GroupLeader.Name</RadzenText>
-                        </Template>
-                    </RadzenDataGridColumn>
-                }
-                else
-                {
-                    <RadzenDataGridColumn Title="Logikai csoportok">
-                        <Template Context="user">
-                            @string.Join(", ", user.LogicalGroups.Select(u => u.Name).ToList())
-                        </Template>
-                    </RadzenDataGridColumn>
-                }
-            </Columns>
-        </RadzenDataGrid>
-    </div>
+                <RadzenDataGridColumn Title="Csoport">
+                    <Template Context="user">
+                        @user.HierarchicalGroup?.Name
+                        <RadzenText Style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); margin: 0;">Csoportvezető: @user.HierarchicalGroup?.GroupLeader.Name</RadzenText>
+                    </Template>
+                </RadzenDataGridColumn>
+            }
+            else
+            {
+                <RadzenDataGridColumn Title="Logikai csoportok">
+                    <Template Context="user">
+                        @string.Join(", ", user.LogicalGroups.Select(u => u.Name).ToList())
+                    </Template>
+                </RadzenDataGridColumn>
+            }
+        </Columns>
+    </RadzenDataGrid>
 
     @if (isProcessing)
     {
-        <div class="d-flex flex-column align-items-center justify-content-center" style="height: 200px;">
-            <img src="/img/loading.gif" alt="loading" style="width: 50px;" />
+        <div class="d-flex flex-column align-items-center justify-content-center" style="height: 400px;">
+            <img src="/img/loading.gif" alt="loading" style="width: 200px;" />
         </div>
     }
     else
     {
         <div class="glass-section">
-            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-4">
-                <RadzenLabel Text="Időszak:" Style="font-weight: 800; color: #233D4D; font-size: 1.2rem;" />
-                <RadzenDatePicker @bind-Value="@viewDate" DateFormat="yyyy MMMM" Change="@OnViewDateChanged" ShowTime="false" class="glass-datepicker" />
+            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Start" Gap="0.5rem" class="rz-mb-4">
+                <RadzenText TextStyle="TextStyle.H5" class="section-title rz-mb-4">Időszak</RadzenText>
+                <RadzenSelectBar TValue="int" Size="ButtonSize.Small">
+                    <Items>
+                        <RadzenSelectBarItem Value="1" Text="Január" />
+                        <RadzenSelectBarItem Value="2" Text="Február" />
+                        <RadzenSelectBarItem Value="3" Text="Március" />
+                        <RadzenSelectBarItem Value="4" Text="Április" />
+                        <RadzenSelectBarItem Value="5" Text="Május" />
+                        <RadzenSelectBarItem Value="6" Text="Június" />
+                        <RadzenSelectBarItem Value="7" Text="Július" />
+                        <RadzenSelectBarItem Value="8" Text="Augusztus" />
+                        <RadzenSelectBarItem Value="9" Text="Szeptember" />
+                        <RadzenSelectBarItem Value="10" Text="Október" />
+                        <RadzenSelectBarItem Value="11" Text="November" />
+                        <RadzenSelectBarItem Value="12" Text="December" />
+                    </Items>
+                </RadzenSelectBar>
             </RadzenStack>
 
             @if (selectedEmployees != null && selectedEmployees.Any())

@@ -49,9 +49,11 @@
 
 .app-name {
     font-family: 'Open Sans', sans-serif;
-    font-weight: 600;
     font-size: 3rem;
-    color: #233D4D;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     margin: 0;
 }
 
@@ -66,8 +68,10 @@
 .login-title {
     font-family: 'Open Sans', sans-serif;
     font-weight: 600;
-    font-size: 2.5rem;
-    color: #233D4D;
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
     margin: 20px 0;
 }
 
